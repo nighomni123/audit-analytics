@@ -1,0 +1,21 @@
+# Python caches
+__pycache__/
+*.pyc
+*.pyo
+
+# Engagement data — never commit client ledgers / evidence / exports
+*.db
+*.db-wal
+*.db-shm
+evidence/
+engagements/
+exports/
+backups/
+
+# Secrets / local env
+.env
+.env.example
+
+# Virtual environments / tooling
+.venv/
+node_modules/
