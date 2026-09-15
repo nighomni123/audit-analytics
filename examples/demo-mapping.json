@@ -1,0 +1,6 @@
+{
+  "posting_date": "posting_ts",
+  "amount": "amount_rm",
+  "preparer": "posted_by",
+  "description": "doc_type"
+}

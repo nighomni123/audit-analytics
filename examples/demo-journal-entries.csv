@@ -1,0 +1,401 @@
+entry_id,posting_date,account_code,account_name,vendor_id,vendor_name,amount,preparer,approved_by,doc_type
+JE011108,2025-10-01,6400,Repairs & maintenance,V002,Sinar Harapan Enterprise,1055.81,U009,U024,AP invoice
+JE029089,2025-03-13,6500,Utilities,V032,Kota Kinabalu Freight,11031.44,U012,U016,AP invoice
+JE015962,2025-05-30,6600,Marketing,V031,Rimba Landscaping Sdn Bhd,2259.11,U019,U013,AP invoice
+JE013556,2025-07-23,6400,Repairs & maintenance,V001,Maju Jaya Trading Sdn Bhd,16132.46,U019,U015,AP invoice
+JE009009,2025-10-08,6700,Travel & entertainment,V050,Cheras Building Materials,7713.89,U019,U024,AP invoice
+JE019886,2025-05-28,6600,Marketing,V053,Setapak Scaffolding,4102.99,U006,U016,AP invoice
+JE001913,2025-02-21,6500,Utilities,V021,Kenanga Stationery Supplies,7160.39,U012,U014,AP invoice
+JE034455,2025-06-09,5100,Cost of goods sold,V036,Cyberjaya Data Systems,3021.89,U009,U014,AP invoice
+JE016208,2025-02-11,6600,Marketing,V059,Tawau Palm Logistics,13815.58,U024,U016,AP invoice
+JE009927,2025-05-30,6500,Utilities,V036,Cyberjaya Data Systems,9761.87,U005,U023,AP invoice
+JE026440,2025-09-26,6500,Utilities,V011,Cahaya Elektrik Sdn Bhd,639.03,U019,U013,AP invoice
+JE034039,2025-07-29,5200,Freight & logistics,V049,Ampang Glass & Aluminium,4022.39,U019,U024,AP invoice
+JE008648,2025-01-14,6300,Professional fees,V055,Rawang Cement Distributors,893.75,U020,U017,AP invoice
+JE003777,2025-02-06,6500,Utilities,V014,Melaka Packaging Industries,1070.33,U020,U016,AP invoice
+JE000274,2025-05-07,5100,Cost of goods sold,V032,Kota Kinabalu Freight,2202.19,U010,U018,AP invoice
+JE004916,2025-12-16,6700,Travel & entertainment,V014,Melaka Packaging Industries,23074.61,U011,U023,AP invoice
+JE021717,2025-05-13,5200,Freight & logistics,V046,Titiwangsa Medical Supplies,991.4,U020,U023,AP invoice
+JE034509,2025-09-01,6200,IT & software,V016,Johor Chemical Supplies,1986.21,U024,U016,AP invoice
+JE012366,2025-12-15,5200,Freight & logistics,V038,Taman Desa Food Industries,14163.7,U019,U024,AP invoice
+JE014178,2025-07-31,6200,IT & software,V043,Bangsar Interior Design,2175.64,U001,U024,AP invoice
+JE018068,2025-12-19,6100,Office supplies,V007,Borneo Timber Industries,32888.44,U006,U016,AP invoice
+JE026237,2025-06-17,6600,Marketing,V037,Putra Heights Construction,16441.19,U012,U024,AP invoice
+JE033584,2025-05-06,5200,Freight & logistics,V034,Lestari Environmental Services,3560.58,U005,U023,AP invoice
+JE028859,2025-06-24,5100,Cost of goods sold,V002,Sinar Harapan Enterprise,38547.85,U022,U024,AP invoice
+JE001292,2025-11-12,5100,Cost of goods sold,V014,Melaka Packaging Industries,1986.97,U003,U018,AP invoice
+JE018553,2025-11-25,6400,Repairs & maintenance,V012,Penang Precision Parts,596.97,U006,U024,AP invoice
+JE010969,2025-01-22,6500,Utilities,V020,Damai Security Services,10982.26,U010,U024,AP invoice
+JE028720,2025-10-27,6600,Marketing,V001,Maju Jaya Trading Sdn Bhd,1138.01,U003,U024,AP invoice
+JE011490,2025-10-01,6500,Utilities,V058,Skudai Lab Equipment,209.64,U022,U017,AP invoice
+JE018221,2025-01-21,6200,IT & software,V055,Rawang Cement Distributors,2885.55,U005,U023,AP invoice
+JE024148,2025-05-29,6300,Professional fees,V007,Borneo Timber Industries,762.96,U009,U016,AP invoice
+JE011014,2025-08-20,5200,Freight & logistics,V008,Selangor Steel Works Sdn Bhd,3591.5,U004,U015,AP invoice
+JE021544,2025-03-03,6200,IT & software,V058,Skudai Lab Equipment,535.49,U003,U015,AP invoice
+JE022625,2025-05-29,5100,Cost of goods sold,V052,Bandar Utama Events Sdn Bhd,12993.0,U007,U015,AP invoice
+JE009842,2025-05-01,6200,IT & software,V021,Kenanga Stationery Supplies,7957.65,U010,U024,AP invoice
+JE034991,2025-02-24,5200,Freight & logistics,V039,Kuantan Port Services,3960.22,U005,U023,AP invoice
+JE014828,2025-03-06,5200,Freight & logistics,V004,Puncak Emas Logistics Sdn Bhd,2057.23,U012,U016,AP invoice
+JE022543,2025-10-23,6300,Professional fees,V052,Bandar Utama Events Sdn Bhd,2884.41,U021,U018,AP invoice
+JE029569,2025-04-15,6400,Repairs & maintenance,V054,Puchong Electronics Hub,9921.2,U023,U017,AP invoice
+JE017809,2025-12-11,6300,Professional fees,V026,Klang Valley Couriers,1551.92,U019,U013,AP invoice
+JE002555,2025-03-14,6700,Travel & entertainment,V026,Klang Valley Couriers,9596.9,U012,U024,AP invoice
+JE023338,2025-11-19,6300,Professional fees,V036,Cyberjaya Data Systems,7585.56,U011,U024,AP invoice
+JE026458,2025-09-15,5200,Freight & logistics,V047,Langkawi Duty Services,7316.25,U003,U016,AP invoice
+JE004557,2025-06-24,6600,Marketing,V036,Cyberjaya Data Systems,82417.45,U024,U014,AP invoice
+JE027386,2025-02-25,5200,Freight & logistics,V023,Sungai Besi Hardware,6744.13,U006,U023,AP invoice
+JE010043,2025-09-29,6500,Utilities,V025,Bukit Bintang Media Group,1011.89,U022,U016,AP invoice
+JE031966,2025-08-12,5100,Cost of goods sold,V039,Kuantan Port Services,6053.43,U023,U014,AP invoice
+JE025087,2025-06-26,6600,Marketing,V019,Ipoh Engineering Works Sdn Bhd,1004.65,U003,U014,AP invoice
+JE001733,2025-10-16,6200,IT & software,V049,Ampang Glass & Aluminium,8674.02,U006,U013,AP invoice
+JE018816,2025-12-05,6300,Professional fees,V001,Maju Jaya Trading Sdn Bhd,1137.0,U002,U017,AP invoice
+JE035224,2025-02-14,6400,Repairs & maintenance,V009,Nusantara IT Distribution,12689.29,BATCH,U015,AP invoice
+JE007232,2025-07-22,6100,Office supplies,V016,Johor Chemical Supplies,4506.12,U010,U015,AP invoice
+JE009424,2025-01-10,5100,Cost of goods sold,V050,Cheras Building Materials,1841.38,U005,U017,AP invoice
+JE006225,2025-06-09,6600,Marketing,V016,Johor Chemical Supplies,396.51,U011,U015,AP invoice
+JE022501,2025-02-26,6700,Travel & entertainment,V045,Shah Alam Plastics Sdn Bhd,4676.52,U005,U017,AP invoice
+JE004171,2025-04-15,6500,Utilities,V027,Mutiara Cleaning Services,682.17,U002,U024,AP invoice
+JE003663,2025-01-24,6400,Repairs & maintenance,V037,Putra Heights Construction,513.25,U023,U024,AP invoice
+JE002112,2025-11-27,6300,Professional fees,V007,Borneo Timber Industries,5383.54,U005,U017,AP invoice
+JE005122,2025-05-08,6500,Utilities,V048,Kelantan Textiles Sdn Bhd,7377.3,U022,U024,AP invoice
+JE002956,2025-09-25,6700,Travel & entertainment,V058,Skudai Lab Equipment,3216.78,U007,U017,AP invoice
+JE005116,2025-06-16,6500,Utilities,V055,Rawang Cement Distributors,1431.4,U020,U024,AP invoice
+JE013763,2025-07-30,6500,Utilities,V040,Alor Setar Agri Supplies,1771.31,U024,U023,AP invoice
+JE000843,2025-08-06,5100,Cost of goods sold,V027,Mutiara Cleaning Services,687.53,U007,U014,AP invoice
+JE035603,2025-04-18,6100,Office supplies,V034,Lestari Environmental Services,93369.22,U004,U023,AP invoice
+JE028194,2025-12-11,6200,IT & software,V024,Wawasan Training Consultants,3920.23,U001,U017,AP invoice
+JE013989,2025-11-17,5100,Cost of goods sold,V024,Wawasan Training Consultants,3501.72,U021,U017,AP invoice
+JE021007,2025-09-18,6700,Travel & entertainment,V045,Shah Alam Plastics Sdn Bhd,10486.93,U004,U024,AP invoice
+JE027340,2025-03-21,6600,Marketing,V016,Johor Chemical Supplies,452.57,U003,U018,AP invoice
+JE012851,2025-07-25,6400,Repairs & maintenance,V004,Puncak Emas Logistics Sdn Bhd,1980.76,U023,U016,AP invoice
+JE022875,2025-07-10,6600,Marketing,V001,Maju Jaya Trading Sdn Bhd,8932.07,U005,U015,AP invoice
+JE010610,2025-08-20,6300,Professional fees,V047,Langkawi Duty Services,8519.43,U003,U017,AP invoice
+JE032005,2025-05-27,6700,Travel & entertainment,V051,Kepong Cold Storage,721.69,U023,U013,AP invoice
+JE033978,2025-09-10,5100,Cost of goods sold,V034,Lestari Environmental Services,1200.28,U012,U017,AP invoice
+JE005227,2025-03-19,6500,Utilities,V021,Kenanga Stationery Supplies,4810.48,U007,U023,AP invoice
+JE009441,2025-09-08,6200,IT & software,V016,Johor Chemical Supplies,5007.35,U011,U013,AP invoice
+JE014304,2025-10-08,5200,Freight & logistics,V053,Setapak Scaffolding,9729.15,U003,U013,AP invoice
+JE017579,2025-05-29,6700,Travel & entertainment,V049,Ampang Glass & Aluminium,1368.73,U005,U017,AP invoice
+JE022288,2025-01-03,6400,Repairs & maintenance,V001,Maju Jaya Trading Sdn Bhd,2008.56,U007,U016,AP invoice
+JE014075,2025-12-24,5200,Freight & logistics,V010,Harmoni Facilities Management,11884.81,U004,U014,AP invoice
+JE007328,2025-01-13,6500,Utilities,V035,Merdeka Uniform Supplies,13665.62,U024,U023,AP invoice
+JE021739,2025-10-17,6200,IT & software,V026,Klang Valley Couriers,2772.89,U020,U023,AP invoice
+JE024439,2025-05-14,6400,Repairs & maintenance,V034,Lestari Environmental Services,490.91,U012,U017,AP invoice
+JE003494,2025-06-23,6500,Utilities,V043,Bangsar Interior Design,19953.54,U003,U018,AP invoice
+JE027867,2025-07-22,5100,Cost of goods sold,V009,Nusantara IT Distribution,1147.63,U021,U015,AP invoice
+JE010789,2025-08-12,5100,Cost of goods sold,V031,Rimba Landscaping Sdn Bhd,146.34,U003,U015,AP invoice
+JE026312,2025-12-15,6200,IT & software,V005,Delima Fresh Supplies,12040.34,U022,U023,AP invoice
+JE014518,2025-02-26,6500,Utilities,V049,Ampang Glass & Aluminium,422.67,U024,U013,AP invoice
+JE018666,2025-04-22,5200,Freight & logistics,V003,TechNova Solutions Sdn Bhd,4048.48,U012,U013,AP invoice
+JE015182,2025-02-27,6300,Professional fees,V001,Maju Jaya Trading Sdn Bhd,1460.49,U006,U015,AP invoice
+JE010907,2025-11-18,6400,Repairs & maintenance,V029,Temasek Instruments,43192.99,U024,U014,AP invoice
+JE030823,2025-10-23,6500,Utilities,V013,Bintang Utara Transport,5161.44,U002,U016,AP invoice
+JE009593,2025-07-24,6100,Office supplies,V003,TechNova Solutions Sdn Bhd,6723.59,U019,U015,AP invoice
+JE005811,2025-09-22,6200,IT & software,V047,Langkawi Duty Services,15809.98,U011,U013,AP invoice
+JE026548,2025-10-08,6300,Professional fees,V054,Puchong Electronics Hub,963.59,U012,U024,AP invoice
+JE020475,2025-05-13,6200,IT & software,V050,Cheras Building Materials,1317.97,U006,U014,AP invoice
+JE021284,2025-12-12,6500,Utilities,V003,TechNova Solutions Sdn Bhd,6224.86,U006,U018,AP invoice
+JE020861,2025-09-16,6500,Utilities,V042,Subang Aviation Parts,14865.69,U006,U016,AP invoice
+JE016086,2025-06-10,6700,Travel & entertainment,V051,Kepong Cold Storage,7936.98,U006,U015,AP invoice
+JE021012,2025-07-17,6400,Repairs & maintenance,V026,Klang Valley Couriers,5084.89,U001,U017,AP invoice
+JE029853,2025-04-24,6600,Marketing,V012,Penang Precision Parts,20060.39,U023,U016,AP invoice
+JE016271,2025-04-10,6300,Professional fees,V041,Genting View Hospitality,11030.4,U019,U016,AP invoice
+JE034035,2025-03-21,5100,Cost of goods sold,V004,Puncak Emas Logistics Sdn Bhd,415.11,U019,U023,AP invoice
+JE023371,2025-02-14,6600,Marketing,V043,Bangsar Interior Design,2821.01,U024,U013,AP invoice
+JE002300,2025-12-11,6100,Office supplies,V056,Nilai Furniture Gallery,44805.72,U012,U024,AP invoice
+JE025566,2025-10-17,6700,Travel & entertainment,V052,Bandar Utama Events Sdn Bhd,5031.48,U023,U017,AP invoice
+JE018672,2025-04-23,6400,Repairs & maintenance,V011,Cahaya Elektrik Sdn Bhd,12298.69,U011,U023,AP invoice
+JE006217,2025-09-24,6600,Marketing,V033,Seremban Tools & Dies,502.24,U008,U023,AP invoice
+JE013618,2025-01-10,6200,IT & software,V038,Taman Desa Food Industries,3530.59,U024,U014,AP invoice
+JE029590,2025-03-17,5200,Freight & logistics,V005,Delima Fresh Supplies,9764.32,U003,U013,AP invoice
+JE009401,2025-08-05,6300,Professional fees,V033,Seremban Tools & Dies,6011.63,U022,U016,AP invoice
+JE014735,2025-03-26,6200,IT & software,V022,Perdana Auto Fleet Sdn Bhd,842.98,U012,U024,AP invoice
+JE010017,2025-04-03,6500,Utilities,V056,Nilai Furniture Gallery,2603.61,U011,U014,AP invoice
+JE004757,2025-01-07,6400,Repairs & maintenance,V029,Temasek Instruments,3153.01,U020,U023,AP invoice
+JE032832,2025-07-11,6400,Repairs & maintenance,V020,Damai Security Services,52025.7,U005,U017,AP invoice
+JE029899,2025-10-29,6700,Travel & entertainment,V022,Perdana Auto Fleet Sdn Bhd,59775.37,U005,U014,AP invoice
+JE031562,2025-04-11,5200,Freight & logistics,V003,TechNova Solutions Sdn Bhd,6587.55,U003,U016,AP invoice
+JE015892,2025-10-10,6100,Office supplies,V005,Delima Fresh Supplies,3207.34,U020,U013,AP invoice
+JE000145,2025-11-20,6700,Travel & entertainment,V058,Skudai Lab Equipment,1302.41,U006,U015,AP invoice
+JE020321,2025-06-18,6700,Travel & entertainment,V029,Temasek Instruments,4582.25,U008,U024,AP invoice
+JE009768,2025-10-21,6500,Utilities,V004,Puncak Emas Logistics Sdn Bhd,9024.0,U022,U014,AP invoice
+JE014647,2025-09-10,6700,Travel & entertainment,V045,Shah Alam Plastics Sdn Bhd,8434.77,U001,U024,AP invoice
+JE008547,2025-08-15,6200,IT & software,V016,Johor Chemical Supplies,5346.35,U020,U023,AP invoice
+JE008469,2025-04-21,6500,Utilities,V009,Nusantara IT Distribution,1976.17,U006,U024,AP invoice
+JE001254,2025-08-07,5100,Cost of goods sold,V015,Seri Wangi Catering Sdn Bhd,5201.46,U005,U017,AP invoice
+JE001279,2025-01-14,6400,Repairs & maintenance,V040,Alor Setar Agri Supplies,5957.8,U002,U024,AP invoice
+JE002533,2025-11-28,6300,Professional fees,V005,Delima Fresh Supplies,26676.1,U005,U013,AP invoice
+JE015015,2025-01-13,5200,Freight & logistics,V054,Puchong Electronics Hub,876.04,U019,U024,AP invoice
+JE029765,2025-06-17,6100,Office supplies,V006,KL Metro Services Sdn Bhd,4377.71,U024,U013,AP invoice
+JE007862,2025-04-10,5200,Freight & logistics,V034,Lestari Environmental Services,6347.89,U023,U016,AP invoice
+JE004385,2025-05-15,5200,Freight & logistics,V019,Ipoh Engineering Works Sdn Bhd,21818.21,U011,U013,AP invoice
+JE003129,2025-06-04,6600,Marketing,V009,Nusantara IT Distribution,29432.35,U019,U023,AP invoice
+JE025755,2025-09-24,6400,Repairs & maintenance,V035,Merdeka Uniform Supplies,7326.12,U010,U023,AP invoice
+JE028185,2025-03-26,6700,Travel & entertainment,V027,Mutiara Cleaning Services,539.72,U021,U015,AP invoice
+JE010013,2025-03-10,6200,IT & software,V039,Kuantan Port Services,1890.48,U001,U016,AP invoice
+JE022478,2025-03-24,6500,Utilities,V034,Lestari Environmental Services,7938.72,U004,U014,AP invoice
+JE029852,2025-12-31,5100,Cost of goods sold,V013,Bintang Utara Transport,2081.7,U022,U013,AP invoice
+JE005568,2025-11-25,6200,IT & software,V041,Genting View Hospitality,821.24,U010,U024,AP invoice
+JE020738,2025-04-09,6700,Travel & entertainment,V053,Setapak Scaffolding,2953.6,U011,U015,AP invoice
+JE008919,2025-10-10,6300,Professional fees,V009,Nusantara IT Distribution,1817.79,U008,U015,AP invoice
+JE003508,2025-09-01,6500,Utilities,V028,Sabah Marine Supplies Sdn Bhd,2303.21,U005,U016,AP invoice
+JE005706,2025-11-06,6600,Marketing,V005,Delima Fresh Supplies,3546.7,U001,U015,AP invoice
+JE014160,2025-10-10,6100,Office supplies,V003,TechNova Solutions Sdn Bhd,3254.43,U021,U013,AP invoice
+JE026502,2025-01-06,5100,Cost of goods sold,V016,Johor Chemical Supplies,954.81,U012,U023,AP invoice
+JE033278,2025-04-17,5100,Cost of goods sold,V045,Shah Alam Plastics Sdn Bhd,2596.58,U005,U023,AP invoice
+JE009709,2025-05-02,6300,Professional fees,V004,Puncak Emas Logistics Sdn Bhd,597.55,U002,U023,AP invoice
+JE032149,2025-06-17,6300,Professional fees,V041,Genting View Hospitality,4705.68,U005,U015,AP invoice
+JE020211,2025-11-07,6200,IT & software,V008,Selangor Steel Works Sdn Bhd,43930.38,U023,U015,AP invoice
+JE006040,2025-01-29,6500,Utilities,V034,Lestari Environmental Services,1043.34,U002,U016,AP invoice
+JE025389,2025-11-06,6200,IT & software,V052,Bandar Utama Events Sdn Bhd,28833.23,U021,U023,AP invoice
+JE012258,2025-04-29,6500,Utilities,V021,Kenanga Stationery Supplies,237.28,U024,U018,AP invoice
+JE004141,2025-08-12,6400,Repairs & maintenance,V013,Bintang Utara Transport,5633.81,U009,U014,AP invoice
+JE033009,2025-08-07,6100,Office supplies,V016,Johor Chemical Supplies,5375.66,U023,U024,AP invoice
+JE018839,2025-07-31,6500,Utilities,V019,Ipoh Engineering Works Sdn Bhd,357.82,U022,U024,AP invoice
+JE021980,2025-09-19,5200,Freight & logistics,V013,Bintang Utara Transport,4796.62,U001,U024,AP invoice
+JE034399,2025-07-25,6700,Travel & entertainment,V043,Bangsar Interior Design,13343.91,U021,U013,AP invoice
+JE028177,2025-09-04,5200,Freight & logistics,V020,Damai Security Services,4155.05,U012,U013,AP invoice
+JE020037,2025-10-22,6700,Travel & entertainment,V003,TechNova Solutions Sdn Bhd,823.86,U007,U014,AP invoice
+JE000041,2025-09-30,6700,Travel & entertainment,V001,Maju Jaya Trading Sdn Bhd,727.64,U001,U013,AP invoice
+JE002347,2025-02-27,5100,Cost of goods sold,V058,Skudai Lab Equipment,110.24,U005,U014,AP invoice
+JE025457,2025-05-19,6500,Utilities,V012,Penang Precision Parts,9961.31,U023,U018,AP invoice
+JE007824,2025-03-27,5100,Cost of goods sold,V016,Johor Chemical Supplies,14670.39,U007,U018,AP invoice
+JE030394,2025-06-20,6100,Office supplies,V004,Puncak Emas Logistics Sdn Bhd,1062.05,U024,U014,AP invoice
+JE006001,2025-04-24,6100,Office supplies,V005,Delima Fresh Supplies,4621.17,U020,U023,AP invoice
+JE029890,2025-11-17,6500,Utilities,V032,Kota Kinabalu Freight,736.0,U011,U015,AP invoice
+JE000929,2025-02-26,6400,Repairs & maintenance,V009,Nusantara IT Distribution,1719.71,U003,U023,AP invoice
+JE014877,2025-10-13,5100,Cost of goods sold,V060,Miri Offshore Supplies,2018.41,U007,U017,AP invoice
+JE019144,2025-08-12,6700,Travel & entertainment,V036,Cyberjaya Data Systems,1383.01,U007,U015,AP invoice
+JE027019,2025-09-25,6300,Professional fees,V028,Sabah Marine Supplies Sdn Bhd,13721.34,U022,U015,AP invoice
+JE026873,2025-05-13,5200,Freight & logistics,V002,Sinar Harapan Enterprise,1267.45,U020,U014,AP invoice
+JE011766,2025-12-18,6600,Marketing,V060,Miri Offshore Supplies,1832.21,U002,U013,AP invoice
+JE014281,2025-10-07,6600,Marketing,V050,Cheras Building Materials,2643.53,U021,U018,AP invoice
+JE001759,2025-05-02,5200,Freight & logistics,V041,Genting View Hospitality,805.21,U010,U015,AP invoice
+JE016405,2025-09-26,5200,Freight & logistics,V041,Genting View Hospitality,17482.26,U022,U013,AP invoice
+JE020197,2025-08-04,6400,Repairs & maintenance,V047,Langkawi Duty Services,9418.82,U024,U018,AP invoice
+JE003068,2025-01-08,5100,Cost of goods sold,V045,Shah Alam Plastics Sdn Bhd,2805.27,U021,U023,AP invoice
+JE023097,2025-12-19,6400,Repairs & maintenance,V005,Delima Fresh Supplies,4354.26,U003,U017,AP invoice
+JE029814,2025-06-02,6400,Repairs & maintenance,V013,Bintang Utara Transport,16795.66,U005,U024,AP invoice
+JE009933,2025-09-05,6400,Repairs & maintenance,V036,Cyberjaya Data Systems,1063.05,U001,U017,AP invoice
+JE014859,2025-08-27,6400,Repairs & maintenance,V035,Merdeka Uniform Supplies,999.13,U022,U015,AP invoice
+JE033813,2025-01-08,6100,Office supplies,V045,Shah Alam Plastics Sdn Bhd,1829.4,U001,U023,AP invoice
+JE025066,2025-12-15,6200,IT & software,V042,Subang Aviation Parts,26609.57,U023,U024,AP invoice
+JE017839,2025-09-17,6400,Repairs & maintenance,V011,Cahaya Elektrik Sdn Bhd,8185.99,U012,U018,AP invoice
+JE014674,2025-06-26,5200,Freight & logistics,V018,Gemilang Printing Press,7315.05,U020,U018,AP invoice
+JE013820,2025-07-24,6100,Office supplies,V053,Setapak Scaffolding,1190.41,U020,U016,AP invoice
+JE024185,2025-09-29,6200,IT & software,V002,Sinar Harapan Enterprise,13423.07,U012,U024,AP invoice
+JE006368,2025-02-06,6700,Travel & entertainment,V011,Cahaya Elektrik Sdn Bhd,1636.96,U024,U015,AP invoice
+JE020965,2025-04-10,5100,Cost of goods sold,V030,Angkasa Telecommunication,1478.55,U001,U024,AP invoice
+JE022250,2025-10-15,6100,Office supplies,V035,Merdeka Uniform Supplies,9672.14,U010,U023,AP invoice
+JE018645,2025-10-20,6500,Utilities,V005,Delima Fresh Supplies,3902.66,U009,U015,AP invoice
+JE011776,2025-06-10,6100,Office supplies,V044,Petaling Jaya Motors,8554.22,U009,U023,AP invoice
+JE023003,2025-01-23,6700,Travel & entertainment,V060,Miri Offshore Supplies,3715.36,U009,U023,AP invoice
+JE030147,2025-09-01,6600,Marketing,V043,Bangsar Interior Design,8359.74,U011,U013,AP invoice
+JE013884,2025-08-13,6500,Utilities,V035,Merdeka Uniform Supplies,10912.64,U008,U016,AP invoice
+JE023446,2025-01-10,6700,Travel & entertainment,V005,Delima Fresh Supplies,96210.39,U019,U018,AP invoice
+JE018639,2025-12-25,6400,Repairs & maintenance,V057,Kajang Satay House Catering,5459.93,U020,U015,AP invoice
+JE012791,2025-03-28,5100,Cost of goods sold,V054,Puchong Electronics Hub,434.92,U001,U014,AP invoice
+JE024076,2025-04-21,5200,Freight & logistics,V006,KL Metro Services Sdn Bhd,3014.11,U021,U017,AP invoice
+JE002096,2025-09-15,6100,Office supplies,V049,Ampang Glass & Aluminium,11526.86,U006,U017,AP invoice
+JE014149,2025-10-24,6100,Office supplies,V057,Kajang Satay House Catering,7225.66,U021,U017,AP invoice
+JE034728,2025-08-06,6600,Marketing,V027,Mutiara Cleaning Services,3253.22,U011,U018,AP invoice
+JE017448,2025-03-27,6500,Utilities,V010,Harmoni Facilities Management,7143.24,U007,U014,AP invoice
+JE025756,2025-09-17,6600,Marketing,V029,Temasek Instruments,4853.09,U005,U016,AP invoice
+JE021770,2025-06-27,6500,Utilities,V045,Shah Alam Plastics Sdn Bhd,3524.88,U011,U017,AP invoice
+JE017186,2025-12-18,5100,Cost of goods sold,V008,Selangor Steel Works Sdn Bhd,11481.2,U020,U018,AP invoice
+JE035497,2025-06-16,6600,Marketing,V008,Selangor Steel Works Sdn Bhd,5000.0,U010,U015,AP invoice
+JE023034,2025-01-28,6300,Professional fees,V041,Genting View Hospitality,520.61,U004,U016,AP invoice
+JE011449,2025-04-30,5200,Freight & logistics,V028,Sabah Marine Supplies Sdn Bhd,363.09,U004,U014,AP invoice
+JE000960,2025-08-22,6300,Professional fees,V020,Damai Security Services,621.64,U010,U013,AP invoice
+JE027362,2025-04-21,6600,Marketing,V007,Borneo Timber Industries,2223.97,U020,U013,AP invoice
+JE011755,2025-08-19,5100,Cost of goods sold,V016,Johor Chemical Supplies,5621.72,U012,U013,AP invoice
+JE024457,2025-09-25,6500,Utilities,V014,Melaka Packaging Industries,15068.2,U009,U015,AP invoice
+JE002636,2025-05-19,6700,Travel & entertainment,V024,Wawasan Training Consultants,1254.19,U020,U016,AP invoice
+JE020904,2025-12-08,5100,Cost of goods sold,V003,TechNova Solutions Sdn Bhd,2844.77,U004,U024,AP invoice
+JE031986,2025-07-04,6200,IT & software,V022,Perdana Auto Fleet Sdn Bhd,5599.89,U004,U018,AP invoice
+JE034882,2025-03-13,5200,Freight & logistics,V046,Titiwangsa Medical Supplies,1980.61,U022,U017,AP invoice
+JE000071,2025-11-11,6400,Repairs & maintenance,V058,Skudai Lab Equipment,10286.49,U012,U018,AP invoice
+JE035744,2025-01-15,6500,Utilities,V034,Lestari Environmental Services,9160.39,U002,U016,AP invoice
+JE002901,2025-11-13,6200,IT & software,V024,Wawasan Training Consultants,12366.11,U001,U016,AP invoice
+JE019453,2025-03-06,6300,Professional fees,V013,Bintang Utara Transport,2206.54,U003,U014,AP invoice
+JE014004,2025-08-05,6500,Utilities,V025,Bukit Bintang Media Group,1364.71,U003,U023,AP invoice
+JE020124,2025-04-25,5200,Freight & logistics,V050,Cheras Building Materials,12737.32,U021,U017,AP invoice
+JE005349,2025-08-13,6600,Marketing,V013,Bintang Utara Transport,1946.97,U021,U023,AP invoice
+JE029560,2025-10-21,6400,Repairs & maintenance,V018,Gemilang Printing Press,1359.8,U011,U023,AP invoice
+JE002343,2025-02-28,5100,Cost of goods sold,V048,Kelantan Textiles Sdn Bhd,14790.81,U007,U013,AP invoice
+JE033120,2025-12-10,6700,Travel & entertainment,V034,Lestari Environmental Services,7111.93,U005,U014,AP invoice
+JE003116,2025-01-13,5100,Cost of goods sold,V054,Puchong Electronics Hub,1512.29,U020,U014,AP invoice
+JE002301,2025-08-27,6700,Travel & entertainment,V008,Selangor Steel Works Sdn Bhd,13293.07,U011,U017,AP invoice
+JE011837,2025-09-23,6700,Travel & entertainment,V025,Bukit Bintang Media Group,6447.22,U009,U023,AP invoice
+JE020654,2025-06-02,5100,Cost of goods sold,V020,Damai Security Services,10570.77,U012,U016,AP invoice
+JE002438,2025-07-18,5200,Freight & logistics,V026,Klang Valley Couriers,2966.72,U019,U016,AP invoice
+JE006129,2025-11-21,6500,Utilities,V043,Bangsar Interior Design,6557.1,U001,U014,AP invoice
+JE021654,2025-08-11,5200,Freight & logistics,V004,Puncak Emas Logistics Sdn Bhd,1065.47,U019,U015,AP invoice
+JE004668,2025-01-13,6600,Marketing,V027,Mutiara Cleaning Services,4931.2,U024,U014,AP invoice
+JE013821,2025-02-10,6600,Marketing,V009,Nusantara IT Distribution,1039.08,U002,U023,AP invoice
+JE031289,2025-07-24,6200,IT & software,V053,Setapak Scaffolding,1078.27,U019,U015,AP invoice
+JE015485,2025-08-07,6100,Office supplies,V045,Shah Alam Plastics Sdn Bhd,9389.08,U020,U024,AP invoice
+JE025449,2025-04-01,6500,Utilities,V014,Melaka Packaging Industries,3975.76,U002,U024,AP invoice
+JE019320,2025-02-21,5200,Freight & logistics,V047,Langkawi Duty Services,3589.32,U024,U016,AP invoice
+JE032080,2025-01-20,6500,Utilities,V049,Ampang Glass & Aluminium,5058.19,U008,U024,AP invoice
+JE032969,2025-11-18,6500,Utilities,V023,Sungai Besi Hardware,6511.37,U005,U015,AP invoice
+JE013432,2025-01-20,5100,Cost of goods sold,V020,Damai Security Services,15240.63,U004,U017,AP invoice
+JE033601,2025-03-21,6400,Repairs & maintenance,V042,Subang Aviation Parts,11797.65,U010,U024,AP invoice
+JE004238,2025-03-07,6100,Office supplies,V016,Johor Chemical Supplies,108739.39,U001,U018,AP invoice
+JE023336,2025-06-06,6500,Utilities,V006,KL Metro Services Sdn Bhd,8053.49,U011,U024,AP invoice
+JE029880,2025-05-14,6700,Travel & entertainment,V022,Perdana Auto Fleet Sdn Bhd,5303.36,U009,U018,AP invoice
+JE022849,2025-05-12,6700,Travel & entertainment,V047,Langkawi Duty Services,10572.94,U024,U015,AP invoice
+JE012196,2025-05-14,6400,Repairs & maintenance,V025,Bukit Bintang Media Group,4948.34,U007,U024,AP invoice
+JE024447,2025-09-26,5100,Cost of goods sold,V046,Titiwangsa Medical Supplies,2100.01,U002,U013,AP invoice
+JE003029,2025-07-04,6700,Travel & entertainment,V047,Langkawi Duty Services,6336.84,U023,U017,AP invoice
+JE010951,2025-02-17,5200,Freight & logistics,V026,Klang Valley Couriers,4210.32,U021,U015,AP invoice
+JE013539,2025-10-08,6600,Marketing,V041,Genting View Hospitality,7083.94,U010,U015,AP invoice
+JE016537,2025-06-19,6100,Office supplies,V014,Melaka Packaging Industries,834.3,U007,U017,AP invoice
+JE020281,2025-03-10,6700,Travel & entertainment,V011,Cahaya Elektrik Sdn Bhd,1109.52,U005,U016,AP invoice
+JE025310,2025-11-18,5100,Cost of goods sold,V044,Petaling Jaya Motors,738.57,U023,U016,AP invoice
+JE028889,2025-12-03,6300,Professional fees,V049,Ampang Glass & Aluminium,3196.42,U007,U016,AP invoice
+JE028690,2025-09-03,6200,IT & software,V016,Johor Chemical Supplies,1112.89,U005,U024,AP invoice
+JE001762,2025-02-11,6600,Marketing,V041,Genting View Hospitality,4205.77,U004,U018,AP invoice
+JE014479,2025-09-22,6600,Marketing,V019,Ipoh Engineering Works Sdn Bhd,12086.11,U002,U024,AP invoice
+JE023627,2025-06-26,6100,Office supplies,V036,Cyberjaya Data Systems,1739.68,U004,U024,AP invoice
+JE022700,2025-09-25,6400,Repairs & maintenance,V039,Kuantan Port Services,133472.38,U001,U015,AP invoice
+JE003923,2025-03-10,5100,Cost of goods sold,V021,Kenanga Stationery Supplies,3514.96,U004,U013,AP invoice
+JE024541,2025-03-06,6500,Utilities,V023,Sungai Besi Hardware,8083.88,U006,U017,AP invoice
+JE031818,2025-02-12,5100,Cost of goods sold,V004,Puncak Emas Logistics Sdn Bhd,11588.03,U012,U013,AP invoice
+JE019514,2025-03-26,6300,Professional fees,V006,KL Metro Services Sdn Bhd,1159.21,U019,U023,AP invoice
+JE024970,2025-08-26,5100,Cost of goods sold,V011,Cahaya Elektrik Sdn Bhd,2995.9,U022,U024,AP invoice
+JE035528,2025-05-15,6400,Repairs & maintenance,V034,Lestari Environmental Services,70148.02,U007,U014,AP invoice
+JE000264,2025-04-07,5200,Freight & logistics,V026,Klang Valley Couriers,3189.29,U001,U024,AP invoice
+JE017874,2025-08-28,6300,Professional fees,V014,Melaka Packaging Industries,7808.74,U006,U015,AP invoice
+JE003212,2025-12-16,6700,Travel & entertainment,V004,Puncak Emas Logistics Sdn Bhd,1559.4,U022,U015,AP invoice
+JE002266,2025-06-05,6100,Office supplies,V003,TechNova Solutions Sdn Bhd,2843.11,U024,U017,AP invoice
+JE015228,2025-10-10,6400,Repairs & maintenance,V009,Nusantara IT Distribution,14090.29,U009,U018,AP invoice
+JE006804,2025-06-13,6600,Marketing,V031,Rimba Landscaping Sdn Bhd,32505.21,U001,U018,AP invoice
+JE006047,2025-02-10,6400,Repairs & maintenance,V048,Kelantan Textiles Sdn Bhd,56448.24,U012,U016,AP invoice
+JE031027,2025-10-30,6700,Travel & entertainment,V059,Tawau Palm Logistics,5738.96,U024,U023,AP invoice
+JE005504,2025-01-07,5200,Freight & logistics,V028,Sabah Marine Supplies Sdn Bhd,2450.85,U003,U023,AP invoice
+JE030638,2025-03-19,6100,Office supplies,V051,Kepong Cold Storage,11149.9,U012,U015,AP invoice
+JE021656,2025-10-17,6300,Professional fees,V043,Bangsar Interior Design,8544.5,U009,U013,AP invoice
+JE014336,2025-11-27,6200,IT & software,V016,Johor Chemical Supplies,1118.74,U001,U017,AP invoice
+JE022455,2025-12-09,6400,Repairs & maintenance,V030,Angkasa Telecommunication,590.5,U023,U013,AP invoice
+JE033504,2025-05-01,6700,Travel & entertainment,V038,Taman Desa Food Industries,10202.03,U009,U015,AP invoice
+JE002035,2025-06-06,5200,Freight & logistics,V015,Seri Wangi Catering Sdn Bhd,794.17,U001,U023,AP invoice
+JE031178,2025-04-10,6700,Travel & entertainment,V031,Rimba Landscaping Sdn Bhd,1006.99,U011,U013,AP invoice
+JE010780,2025-09-26,6600,Marketing,V048,Kelantan Textiles Sdn Bhd,5316.73,U009,U013,AP invoice
+JE005361,2025-09-24,6200,IT & software,V056,Nilai Furniture Gallery,5921.69,U024,U023,AP invoice
+JE027684,2025-03-18,5100,Cost of goods sold,V055,Rawang Cement Distributors,1181.33,U007,U015,AP invoice
+JE030591,2025-07-25,6300,Professional fees,V035,Merdeka Uniform Supplies,2115.32,U012,U024,AP invoice
+JE007965,2025-06-17,6100,Office supplies,V043,Bangsar Interior Design,2259.11,U012,U015,AP invoice
+JE012441,2025-09-30,6600,Marketing,V038,Taman Desa Food Industries,5928.61,U002,U017,AP invoice
+JE002625,2025-05-05,6600,Marketing,V041,Genting View Hospitality,10545.08,U009,U016,AP invoice
+JE030600,2025-04-08,5100,Cost of goods sold,V003,TechNova Solutions Sdn Bhd,6070.35,U004,U015,AP invoice
+JE007175,2025-10-23,5200,Freight & logistics,V055,Rawang Cement Distributors,1031.39,U007,U016,AP invoice
+JE026307,2025-02-18,6300,Professional fees,V051,Kepong Cold Storage,402.54,U011,U023,AP invoice
+JE015363,2025-10-10,6700,Travel & entertainment,V039,Kuantan Port Services,1776.46,U002,U015,AP invoice
+JE020522,2025-01-15,5100,Cost of goods sold,V015,Seri Wangi Catering Sdn Bhd,4937.05,U008,U024,AP invoice
+JE019306,2025-12-30,6600,Marketing,V026,Klang Valley Couriers,5018.18,U019,U015,AP invoice
+JE018348,2025-02-05,6100,Office supplies,V039,Kuantan Port Services,8198.75,U008,U018,AP invoice
+JE022299,2025-02-24,6300,Professional fees,V039,Kuantan Port Services,16874.12,U019,U013,AP invoice
+JE013530,2025-11-19,6500,Utilities,V021,Kenanga Stationery Supplies,48366.42,U022,U017,AP invoice
+JE009738,2025-01-03,6100,Office supplies,V029,Temasek Instruments,1260.41,U022,U016,AP invoice
+JE008970,2025-02-24,6600,Marketing,V003,TechNova Solutions Sdn Bhd,14335.06,U024,U014,AP invoice
+JE033119,2025-07-31,5100,Cost of goods sold,V046,Titiwangsa Medical Supplies,2236.29,U006,U023,AP invoice
+JE004406,2025-08-26,6200,IT & software,V008,Selangor Steel Works Sdn Bhd,4460.91,U021,U018,AP invoice
+JE027516,2025-09-16,6500,Utilities,V008,Selangor Steel Works Sdn Bhd,2573.12,U006,U016,AP invoice
+JE024824,2025-08-19,6600,Marketing,V003,TechNova Solutions Sdn Bhd,8571.46,U021,U014,AP invoice
+JE009508,2025-12-17,6700,Travel & entertainment,V021,Kenanga Stationery Supplies,6659.07,U008,U017,AP invoice
+JE013914,2025-11-13,6500,Utilities,V042,Subang Aviation Parts,7612.65,U020,U017,AP invoice
+JE026074,2025-01-09,6500,Utilities,V007,Borneo Timber Industries,2452.03,U024,U018,AP invoice
+JE012628,2025-08-08,6200,IT & software,V059,Tawau Palm Logistics,133.93,U001,U015,AP invoice
+JE035690,2025-04-08,6700,Travel & entertainment,V034,Lestari Environmental Services,719.76,U010,U024,AP invoice
+JE012358,2025-05-30,6600,Marketing,V005,Delima Fresh Supplies,1455.26,U002,U015,AP invoice
+JE030493,2025-07-23,5200,Freight & logistics,V053,Setapak Scaffolding,12150.52,U020,U017,AP invoice
+JE031593,2025-08-27,5100,Cost of goods sold,V038,Taman Desa Food Industries,375.19,U022,U014,AP invoice
+JE004266,2025-11-06,6400,Repairs & maintenance,V005,Delima Fresh Supplies,975.86,U007,U016,AP invoice
+JE009255,2025-09-03,6100,Office supplies,V042,Subang Aviation Parts,532.36,U012,U018,AP invoice
+JE033509,2025-10-24,6400,Repairs & maintenance,V035,Merdeka Uniform Supplies,102.65,U001,U023,AP invoice
+JE032519,2025-11-06,6400,Repairs & maintenance,V035,Merdeka Uniform Supplies,6275.54,U010,U014,AP invoice
+JE023826,2025-10-20,6300,Professional fees,V031,Rimba Landscaping Sdn Bhd,7140.01,U003,U014,AP invoice
+JE020818,2025-12-18,6600,Marketing,V028,Sabah Marine Supplies Sdn Bhd,10621.38,U019,U015,AP invoice
+JE003853,2025-08-07,5100,Cost of goods sold,V043,Bangsar Interior Design,13474.38,U009,U013,AP invoice
+JE007570,2025-12-12,6400,Repairs & maintenance,V020,Damai Security Services,6430.82,U011,U014,AP invoice
+JE015752,2025-12-18,5200,Freight & logistics,V046,Titiwangsa Medical Supplies,1558.9,U003,U013,AP invoice
+JE024765,2025-11-11,6400,Repairs & maintenance,V012,Penang Precision Parts,5143.45,U011,U016,AP invoice
+JE004470,2025-05-16,6200,IT & software,V034,Lestari Environmental Services,8563.49,U002,U013,AP invoice
+JE018230,2025-08-21,6700,Travel & entertainment,V054,Puchong Electronics Hub,2272.99,U023,U016,AP invoice
+JE007285,2025-03-05,5200,Freight & logistics,V006,KL Metro Services Sdn Bhd,3212.4,U006,U024,AP invoice
+JE015610,2025-11-26,6700,Travel & entertainment,V032,Kota Kinabalu Freight,9264.51,U022,U015,AP invoice
+JE016788,2025-02-14,6700,Travel & entertainment,V050,Cheras Building Materials,447.37,U004,U015,AP invoice
+JE028980,2025-09-12,6300,Professional fees,V022,Perdana Auto Fleet Sdn Bhd,3164.9,U006,U014,AP invoice
+JE008029,2025-09-10,6400,Repairs & maintenance,V053,Setapak Scaffolding,9739.71,U012,U023,AP invoice
+JE007294,2025-01-08,6500,Utilities,V044,Petaling Jaya Motors,2332.12,U021,U024,AP invoice
+JE030975,2025-04-07,6500,Utilities,V044,Petaling Jaya Motors,13854.68,U007,U023,AP invoice
+JE026262,2025-02-18,6400,Repairs & maintenance,V055,Rawang Cement Distributors,818.41,U002,U018,AP invoice
+JE002650,2025-08-29,6600,Marketing,V022,Perdana Auto Fleet Sdn Bhd,1929.32,U007,U016,AP invoice
+JE005039,2025-10-01,6400,Repairs & maintenance,V011,Cahaya Elektrik Sdn Bhd,2094.78,U007,U013,AP invoice
+JE006613,2025-08-07,6300,Professional fees,V019,Ipoh Engineering Works Sdn Bhd,1814.27,U023,U014,AP invoice
+JE021657,2025-01-08,5200,Freight & logistics,V044,Petaling Jaya Motors,1816.92,U011,U013,AP invoice
+JE032257,2025-08-22,6500,Utilities,V038,Taman Desa Food Industries,2387.92,U020,U014,AP invoice
+JE004524,2025-12-02,5200,Freight & logistics,V006,KL Metro Services Sdn Bhd,22496.95,U010,U017,AP invoice
+JE031879,2025-06-25,6200,IT & software,V021,Kenanga Stationery Supplies,10219.47,U021,U023,AP invoice
+JE020205,2025-10-13,6500,Utilities,V053,Setapak Scaffolding,12303.03,U007,U018,AP invoice
+JE001595,2025-01-09,6100,Office supplies,V018,Gemilang Printing Press,1345.94,U023,U024,AP invoice
+JE030236,2025-04-16,6700,Travel & entertainment,V020,Damai Security Services,1391.45,U007,U017,AP invoice
+JE007124,2025-09-17,6200,IT & software,V005,Delima Fresh Supplies,1320.55,U003,U017,AP invoice
+JE013475,2025-06-20,6600,Marketing,V023,Sungai Besi Hardware,22844.14,U021,U018,AP invoice
+JE016484,2025-02-12,5200,Freight & logistics,V041,Genting View Hospitality,1437.77,U006,U024,AP invoice
+JE021461,2025-09-08,5100,Cost of goods sold,V056,Nilai Furniture Gallery,3594.37,U011,U013,AP invoice
+JE015295,2025-12-01,6500,Utilities,V033,Seremban Tools & Dies,21810.23,U005,U023,AP invoice
+JE024614,2025-05-05,5100,Cost of goods sold,V030,Angkasa Telecommunication,38847.77,U009,U018,AP invoice
+JE015020,2025-04-23,6600,Marketing,V025,Bukit Bintang Media Group,1924.13,U001,U014,AP invoice
+JE001053,2025-12-02,6300,Professional fees,V035,Merdeka Uniform Supplies,18300.55,U004,U023,AP invoice
+JE020419,2025-12-18,6100,Office supplies,V033,Seremban Tools & Dies,17186.71,U004,U014,AP invoice
+JE035451,2025-09-16,6400,Repairs & maintenance,V020,Damai Security Services,1834.87,U020,U024,AP invoice
+JE000097,2025-12-24,6600,Marketing,V033,Seremban Tools & Dies,3176.21,U022,U017,AP invoice
+JE031712,2025-10-23,6600,Marketing,V011,Cahaya Elektrik Sdn Bhd,23024.53,U012,U014,AP invoice
+JE004218,2025-05-12,6100,Office supplies,V010,Harmoni Facilities Management,3666.3,U007,U013,AP invoice
+JE013115,2025-10-02,6400,Repairs & maintenance,V003,TechNova Solutions Sdn Bhd,4762.36,U001,U017,AP invoice
+JE015731,2025-12-29,6500,Utilities,V022,Perdana Auto Fleet Sdn Bhd,2303.51,U007,U015,AP invoice
+JE011769,2025-03-04,6100,Office supplies,V048,Kelantan Textiles Sdn Bhd,5409.1,U012,U018,AP invoice
+JE034248,2025-05-14,6400,Repairs & maintenance,V031,Rimba Landscaping Sdn Bhd,20700.19,U005,U017,AP invoice
+JE001378,2025-07-07,6100,Office supplies,V018,Gemilang Printing Press,34175.99,U006,U018,AP invoice
+JE021130,2025-07-07,6600,Marketing,V055,Rawang Cement Distributors,776.16,U004,U014,AP invoice
+JE016905,2025-05-09,6200,IT & software,V045,Shah Alam Plastics Sdn Bhd,11659.91,U019,U015,AP invoice
+JE022610,2025-08-08,6700,Travel & entertainment,V034,Lestari Environmental Services,9794.16,U006,U013,AP invoice
+JE031614,2025-03-07,6100,Office supplies,V048,Kelantan Textiles Sdn Bhd,1105.17,U021,U014,AP invoice
+JE005467,2025-07-17,6200,IT & software,V013,Bintang Utara Transport,909.21,U011,U024,AP invoice
+JE015571,2025-01-17,6500,Utilities,V055,Rawang Cement Distributors,8877.16,U023,U016,AP invoice
+JE003733,2025-07-17,6300,Professional fees,V018,Gemilang Printing Press,546.54,U009,U024,AP invoice
+JE006563,2025-10-21,5100,Cost of goods sold,V024,Wawasan Training Consultants,4888.44,U008,U016,AP invoice
+JE023610,2025-04-29,6200,IT & software,V059,Tawau Palm Logistics,605.38,U019,U015,AP invoice
+JE002961,2025-09-08,6100,Office supplies,V048,Kelantan Textiles Sdn Bhd,55870.44,U007,U015,AP invoice
+JE015421,2025-09-15,6600,Marketing,V050,Cheras Building Materials,1117.68,U022,U016,AP invoice
+JE007091,2025-03-11,6500,Utilities,V030,Angkasa Telecommunication,2611.04,U022,U016,AP invoice
+JE005217,2025-03-05,6300,Professional fees,V009,Nusantara IT Distribution,3728.03,U021,U024,AP invoice
+JE027265,2025-03-06,5100,Cost of goods sold,V005,Delima Fresh Supplies,38932.77,U008,U023,AP invoice
+JE034821,2025-06-09,6200,IT & software,V039,Kuantan Port Services,5793.84,U005,U013,AP invoice
+JE001189,2025-12-24,6300,Professional fees,V005,Delima Fresh Supplies,1631.65,U012,U014,AP invoice
+JE005158,2025-03-11,6200,IT & software,V051,Kepong Cold Storage,22854.08,U019,U017,AP invoice
+JE017993,2025-12-03,5100,Cost of goods sold,V047,Langkawi Duty Services,280.55,U019,U015,AP invoice
+JE008905,2025-03-11,5100,Cost of goods sold,V036,Cyberjaya Data Systems,47505.51,U012,U018,AP invoice
+JE021405,2025-04-22,6500,Utilities,V042,Subang Aviation Parts,20739.95,U007,U013,AP invoice
+JE016796,2025-10-09,6500,Utilities,V010,Harmoni Facilities Management,55533.0,U021,U013,AP invoice
+JE020814,2025-02-14,6500,Utilities,V052,Bandar Utama Events Sdn Bhd,878.97,U010,U015,AP invoice
+JE006632,2025-09-23,6700,Travel & entertainment,V042,Subang Aviation Parts,1644.97,U012,U024,AP invoice
+JE008319,2025-07-15,5200,Freight & logistics,V021,Kenanga Stationery Supplies,1656.94,U005,U023,AP invoice
+JE012424,2025-12-22,5100,Cost of goods sold,V015,Seri Wangi Catering Sdn Bhd,2094.21,U021,U023,AP invoice
+JE024993,2025-01-28,6600,Marketing,V055,Rawang Cement Distributors,7647.14,U006,U013,AP invoice
+JE015911,2025-03-18,6400,Repairs & maintenance,V040,Alor Setar Agri Supplies,2091.8,U008,U016,AP invoice
+JE012064,2025-06-13,6400,Repairs & maintenance,V033,Seremban Tools & Dies,11301.77,U010,U018,AP invoice
+JE019672,2025-09-17,6400,Repairs & maintenance,V008,Selangor Steel Works Sdn Bhd,4918.04,U009,U014,AP invoice
+JE005219,2025-03-25,5200,Freight & logistics,V007,Borneo Timber Industries,900.9,U020,U015,AP invoice
+JE010332,2025-02-10,6100,Office supplies,V054,Puchong Electronics Hub,5924.52,U001,U017,AP invoice
+JE016859,2025-01-01,6500,Utilities,V040,Alor Setar Agri Supplies,54.39,U009,U014,AP invoice
+JE012586,2025-08-21,5200,Freight & logistics,V042,Subang Aviation Parts,5253.1,U024,U014,AP invoice
+JE008133,2025-11-17,5100,Cost of goods sold,V038,Taman Desa Food Industries,29758.29,U005,U015,AP invoice
+JE032732,2025-07-24,5100,Cost of goods sold,V040,Alor Setar Agri Supplies,6533.11,U011,U013,AP invoice
+JE021215,2025-08-20,5100,Cost of goods sold,V010,Harmoni Facilities Management,24954.07,U023,U015,AP invoice
+JE008364,2025-04-18,6700,Travel & entertainment,V026,Klang Valley Couriers,7079.24,U022,U013,AP invoice
+JE035190,2025-08-26,6200,IT & software,V045,Shah Alam Plastics Sdn Bhd,149.05,BATCH,U013,AP invoice
+JE026598,2025-11-10,6500,Utilities,V048,Kelantan Textiles Sdn Bhd,9218.4,U003,U015,AP invoice
+JE015591,2025-02-04,6300,Professional fees,V016,Johor Chemical Supplies,15217.56,U001,U023,AP invoice

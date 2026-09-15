@@ -4,6 +4,37 @@ Local-first journal-entry analytics for Indian statutory-audit teams. It ranks
 explainable risk cues for auditor review; it does not make audit conclusions or
 issue an opinion.
 
+## 5-minute demo (synthetic data, verified)
+
+No client ledger? The repo ships a 400-row synthetic GL (`examples/`, generated
+locally, no real client data) with a `demo-ground-truth.csv` of planted
+anomalies you can check the tool against. Every command below was run
+end-to-end on 2026-09-15 with Python 3.12; nothing leaves your machine.
+
+```sh
+python3 run.py init --db demo-engagement.db --client "Demo Textiles Ltd" \
+  --period 2025-01-01:2026-03-31 --owner reviewer
+python3 run.py import-gl --db demo-engagement.db --file examples/demo-journal-entries.csv \
+  --actor reviewer --expected-rows 400 --expected-debits 3496407.62 --expected-credits 0
+python3 run.py acknowledge-population --db demo-engagement.db --reviewer reviewer \
+  --note "demo: synthetic 400-row GL, control totals match"
+python3 run.py analyze --db demo-engagement.db --actor reviewer
+python3 run.py report --db demo-engagement.db --out demo-report.html --actor reviewer
+python3 run.py serve --db demo-engagement.db   # review UI on http://127.0.0.1:8788
+```
+
+What you should see: the run raises 148 scored exceptions; 4 of the 5
+date-visible planted anomalies surface (`JE035497` rank 9 via `round_amount`,
+two benford-vendor entries rank 14/22 via `robust_account_peer_outlier`, one
+at 122), one is missed. That is the honest point of this tool: cues with
+reasons and evidence, ranked for a human — not a black-box verdict.
+(`off_hours` in the ground truth is undetectable by design: the schema stores
+posting dates, not timestamps.)
+
+Real ledgers with non-canonical headers? Pass a header-mapping profile like
+`examples/demo-mapping.json` (`--mapping examples/demo-mapping.json`) or save
+one with `save-mapping` for reuse across engagements.
+
 ## Step-by-step: first engagement
 
 This guide creates a separate local database for one client and one audit

@@ -1,0 +1,7 @@
+entry_id,anomaly_type
+JE035451,off_hours
+JE035497,round_amount
+JE035528,benford_vendor
+JE035603,benford_vendor
+JE035690,benford_vendor
+JE035744,benford_vendor
