@@ -15,14 +15,31 @@ PAGE = """<!doctype html><meta charset=utf-8><title>Audit Analytics Review</titl
 <h1>Journal-entry review</h1><p id=summary>Loading engagement state…</p>
 <section><h2>Reviewer session</h2><label>Reviewer <input id=reviewer list=users placeholder="Select configured reviewer"></label><datalist id=users></datalist><span class=small>Local workflow role checks apply when a disposition is saved.</span></section>
 <section><h2>Semantic transaction search</h2><label>Transaction type, narration, or account-head phrase <input id=query size=52 placeholder="manual year-end tax provision"></label><button onclick=searchSimilar()>Find similar transactions</button><p class=small>Token matching always runs. Local vector similarity is included only after an approved Ollama model has indexed the ledger.</p><ol id=semantic-results></ol></section>
-<section><h2>Exception review queue</h2><table><thead><tr><th>Risk</th><th>Entry</th><th>Context</th><th>Reasons / evidence</th><th>Disposition</th></tr></thead><tbody id=rows></tbody></table></section>
+<section><h2>Semantic risk laboratory</h2><p class=small>Experimental evidence for human investigation, never an audit conclusion. Build profiles with the semantic-profile CLI.</p><label>Semantic run <select id=semantic-run onchange=loadSemantic(this.value)><option value="">Latest completed</option></select></label><button onclick=loadSemantic()>Load latest</button><p id=semantic-state role=status></p><details><summary>Profile, clusters and provenance</summary><pre id=semantic-profile style="white-space:pre-wrap;overflow-wrap:anywhere"></pre></details><label>Ledger line ID <input id=investigate-id type=number min=1></label><button onclick=investigate()>Investigate line</button><div id=investigation aria-live=polite></div></section>
+<section><h2>Exception review queue</h2><label>Analysis run (blank = all) <input id=analysis-run type=number min=1></label><button onclick=load()>Filter queue</button><table><thead><tr><th>Risk</th><th>Entry</th><th>Context</th><th>Reasons / evidence</th><th>Disposition</th></tr></thead><tbody id=rows></tbody></table></section>
 <script>
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const options=(current)=>['open','cleared','follow_up','selected_for_testing'].map(v=>`<option ${v===current?'selected':''}>${v}</option>`).join('');
-async function load(){let [queue,status,users]=await Promise.all([fetch('/api/exceptions').then(r=>r.json()),fetch('/api/status').then(r=>r.json()),fetch('/api/users').then(r=>r.json())]);let state=`${queue.count} review cues · ${status.entries} accepted entries · population acknowledgement: ${status.population_acknowledged?'yes':'NO'}`;document.querySelector('#summary').textContent=state;document.querySelector('#users').innerHTML=users.filter(u=>['reviewer','manager','partner','quality_reviewer'].includes(u.role)).map(u=>`<option value="${esc(u.username)}">${esc(u.role)}</option>`).join('');let body=document.querySelector('#rows');body.innerHTML=queue.rows.map(r=>`<tr><td class="${esc(r.severity)}">${esc(r.risk_score)} (${esc(r.severity)})<br>${esc(r.status)}${r.assigned_to?'<br>Assigned: '+esc(r.assigned_to):''}</td><td>${esc(r.entry_id)}<br>${esc(r.posting_date)}<br>${esc(r.account_code)}: ${esc(r.signed_amount)}</td><td>${esc(r.description)}<br>Preparer: ${esc(r.preparer||'—')}<br>Ref: ${esc(r.reference||'—')}</td><td>${r.reasons.map(esc).join('<br>')}<hr><small>${esc(JSON.stringify(r.evidence))}</small></td><td><select id=s${r.id}>${options(r.status)}</select><textarea id=n${r.id} placeholder="Audit rationale / evidence requested"></textarea><button onclick="review(${r.id})">Save</button></td></tr>`).join('')}
+async function load(){let [queue,status,users]=await Promise.all([fetch('/api/exceptions'+(document.querySelector('#analysis-run').value?'?run='+encodeURIComponent(document.querySelector('#analysis-run').value):'')).then(r=>r.json()),fetch('/api/status').then(r=>r.json()),fetch('/api/users').then(r=>r.json())]);let state=`${queue.count} review cues · ${status.entries} accepted entries · population acknowledgement: ${status.population_acknowledged?'yes':'NO'}`;document.querySelector('#summary').textContent=state;document.querySelector('#users').innerHTML=users.filter(u=>['reviewer','manager','partner','quality_reviewer'].includes(u.role)).map(u=>`<option value="${esc(u.username)}">${esc(u.role)}</option>`).join('');let body=document.querySelector('#rows');body.innerHTML=queue.rows.map(r=>`<tr><td class="${esc(r.severity)}">${esc(r.risk_score)} (${esc(r.severity)})<br>${esc(r.status)}${r.assigned_to?'<br>Assigned: '+esc(r.assigned_to):''}</td><td>${esc(r.entry_id)}<br><small>Analysis ${esc(r.run_id)} · Line ${esc(r.ledger_id)}</small><br>${r.evidence.semantic?`<button onclick="investigate(${Number(r.ledger_id)},${Number(r.evidence.semantic.run_id)})">Investigate</button>`:''}<br>${esc(r.posting_date)}<br>${esc(r.account_code)}: ${esc(r.signed_amount)}</td><td>${esc(r.description)}<br>Preparer: ${esc(r.preparer||'—')}<br>Ref: ${esc(r.reference||'—')}</td><td>${r.reasons.map(esc).join('<br>')}<hr><small>${esc(JSON.stringify(r.evidence))}</small></td><td><select id=s${r.id}>${options(r.status)}</select><textarea id=n${r.id} placeholder="Audit rationale / evidence requested"></textarea><button onclick="review(${r.id})">Save</button></td></tr>`).join('')}
 async function review(id){let reviewer=document.querySelector('#reviewer').value.trim();let disposition=document.querySelector('#s'+id).value,note=document.querySelector('#n'+id).value.trim();if(!reviewer){alert('Enter a configured reviewer');return}if(!note){alert('A review note is required');return}let r=await fetch('/api/review',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id,reviewer,disposition,note})});let body=await r.json();if(!r.ok)alert(body.error||'Could not save review');else load()}
 async function searchSimilar(){let q=document.querySelector('#query').value.trim();if(!q)return;let r=await fetch('/api/similar?q='+encodeURIComponent(q)),data=await r.json();let out=document.querySelector('#semantic-results');if(!r.ok){out.innerHTML='<li>'+esc(data.error||'Search failed')+'</li>';return}out.innerHTML=data.results.map(x=>`<li><strong>${esc(x.score)}</strong> · ${esc(x.entry_id)} · ${esc(x.account_code)} · ${esc(x.description)}<br><span class=small>token ${esc(x.token_score)}; semantic ${esc(x.semantic_score??'not indexed')}; shared: ${esc(x.shared_tokens.join(', ')||'—')}; classes: ${esc(x.token_classes.join(', ')||'—')}</span></li>`).join('')||'<li>No matching candidates.</li>'}
-load();</script>"""
+async function loadSemantic(id){
+ const state=document.querySelector('#semantic-state');state.textContent='Loading stored profile…';
+ try{const r=await fetch('/api/semantic-profile'+(id?'?run='+encodeURIComponent(id):'')),d=await r.json();if(!r.ok)throw Error(d.error);
+ document.querySelector('#semantic-run').innerHTML=d.available_runs.map(x=>`<option value="${Number(x.id)}" ${x.id===d.run_id?'selected':''}>Run ${Number(x.id)} · ${esc(x.status)}</option>`).join('');
+ state.textContent=`Run ${d.run_id} · ${d.status} · ${d.provenance.model||'unknown model'} · coverage ${((d.summary.coverage||0)*100).toFixed(1)}% · ${d.provenance.validation_status||'unregistered'}${d.stale?' · STALE: population changed':''}`;
+ document.querySelector('#semantic-profile').textContent=JSON.stringify({summary:d.summary,provenance:d.provenance,configuration:d.configuration},null,2);
+ }catch(e){state.textContent=e.message;document.querySelector('#semantic-profile').textContent='';}
+}
+function peerTable(items){return items.length?'<table><thead><tr><th>Line / entry</th><th>Account / date</th><th>Narration</th><th>Cosine</th></tr></thead><tbody>'+items.map(p=>{const e=p.entry||p;return `<tr><td>${esc(p.ledger_id||e.id)} / ${esc(e.entry_id)}</td><td>${esc(e.account_code)} · ${esc(e.account_name)}<br>${esc(e.posting_date)}</td><td>${esc(e.description)}</td><td>${p.similarity==null?'—':Number(p.similarity).toFixed(3)}</td></tr>`}).join('')+'</tbody></table>':'<p>No eligible examples.</p>';}
+async function investigate(id,run){
+ const out=document.querySelector('#investigation');id=id||document.querySelector('#investigate-id').value;run=run||document.querySelector('#semantic-run').value;
+ if(!id||!run){out.textContent='Select a semantic run and enter a positive ledger line ID.';return}out.textContent='Loading investigation…';
+ try{const r=await fetch('/api/semantic-investigation?run='+encodeURIComponent(run)+'&ledger_id='+encodeURIComponent(id)),d=await r.json();if(!r.ok)throw Error(d.error);const e=d.evidence;
+ out.innerHTML=`<h3>${esc(d.entry.entry_id)} · Line ${esc(d.ledger_id)} · Semantic run ${esc(d.run_id)}</h3>${d.stale?'<p class=high>Historical snapshot: current population has changed. Rebuild before new analysis.</p>':''}<h4>Why flagged</h4><p>${d.cues.map(esc).join(', ')||'No semantic cues; this is not assurance of correctness.'}</p><pre style="white-space:pre-wrap">${esc(JSON.stringify({metrics:d.metrics,thresholds:e.cue_details},null,2))}</pre><h4>Normal peers</h4><p>Current account population; historical examples are separately identified below.</p>${peerTable(e.normal_peers||[])}<h4>Alternative matches</h4>${peerTable(e.alternative_matches||[])}<h4>Related population</h4>${Object.entries(e.related_population||{}).map(([k,v])=>`<details><summary>${esc(k)} · ${esc(v.count)} ${v.truncated?'(list truncated)':''}</summary>${peerTable(v.entries)}</details>`).join('')}<h4>Other signals</h4><pre style="white-space:pre-wrap">${esc(d.other_signals.length?JSON.stringify(d.other_signals,null,2):'No linked deterministic analysis: signals have not been evaluated.')}</pre><h4>Suggested evidence to inspect</h4><ul>${(e.suggested_evidence||[]).map(x=>'<li>'+esc(x)+'</li>').join('')}</ul><details><summary>Comparison basis, history and provenance</summary><pre style="white-space:pre-wrap;overflow-wrap:anywhere">${esc(JSON.stringify({comparisons:e.comparisons,provenance:d.provenance,source:d.entry},null,2))}</pre></details><p class=small>${(e.limitations||[]).map(esc).join(' ')}</p>`;
+ }catch(e){out.textContent=e.message;}
+}
+load();loadSemantic();</script>"""
 
 
 def serve(db_path: str, port=8788):
@@ -37,15 +54,42 @@ def serve(db_path: str, port=8788):
             if path.path == "/":
                 payload = PAGE.encode(); self.send_response(200); self.send_header("Content-Type", "text/html; charset=utf-8")
                 self.send_header("Content-Length", str(len(payload))); self.end_headers(); self.wfile.write(payload); return
+            if path.path in {"/api/semantic-profile", "/api/semantic-investigation"}:
+                from .semantic_risk import get_semantic_profile, semantic_investigate
+                s = Store(db_path)
+                try:
+                    qs = parse_qs(path.query, keep_blank_values=True)
+                    def positive(name, required=False):
+                        raw = qs.get(name, [None])[0]
+                        if raw is None and not required: return None
+                        try: value = int(raw)
+                        except (ValueError, TypeError): raise ValueError(f"{name} must be a positive integer")
+                        if value <= 0: raise ValueError(f"{name} must be a positive integer")
+                        return value
+                    if path.path == "/api/semantic-profile":
+                        result = get_semantic_profile(s, positive("run"))
+                        result["available_runs"] = [dict(r) for r in s.conn.execute("SELECT id,status,started_at FROM semantic_runs ORDER BY id DESC LIMIT 100")]
+                    else:
+                        result = semantic_investigate(s, positive("run", True), positive("ledger_id", True))
+                    self._json(result)
+                except LookupError as exc: self._json({"error": str(exc)}, 404)
+                except ValueError as exc: self._json({"error": str(exc)}, 400)
+                finally: s.close()
+                return
             if path.path == "/api/exceptions":
                 s = Store(db_path)
                 try:
+                    raw_run = parse_qs(path.query, keep_blank_values=True).get("run", [None])[0]
+                    run_id = int(raw_run) if raw_run is not None else None
+                    if run_id is not None and run_id <= 0: raise ValueError("run must be positive")
                     rows = s.conn.execute("""SELECT e.*,l.entry_id,l.posting_date,l.account_code,l.signed_amount,l.description,l.preparer,l.reference
-                    FROM exceptions e JOIN ledger_entries l ON l.id=e.ledger_id ORDER BY e.risk_score DESC""").fetchall()
+                    FROM exceptions e JOIN ledger_entries l ON l.id=e.ledger_id
+                    WHERE (? IS NULL OR e.run_id=?) ORDER BY e.risk_score DESC,e.id""", (run_id, run_id)).fetchall()
                     out = []
                     for row in rows:
                         item = dict(row); item["reasons"] = json.loads(item.pop("reasons_json")); item["evidence"] = json.loads(item.pop("evidence_json")); out.append(item)
                     self._json({"count": len(out), "rows": out})
+                except ValueError as exc: self._json({"error": str(exc)}, 400)
                 finally: s.close()
                 return
             if path.path == "/api/status":

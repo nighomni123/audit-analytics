@@ -76,6 +76,26 @@ CREATE TABLE IF NOT EXISTS ledger_embeddings (
   embedded_at REAL NOT NULL, PRIMARY KEY(ledger_id, model, dims)
 );
 CREATE INDEX IF NOT EXISTS ledger_embeddings_model ON ledger_embeddings(model, dims);
+CREATE TABLE IF NOT EXISTS semantic_runs (
+  id INTEGER PRIMARY KEY, started_at REAL NOT NULL, completed_at REAL, actor TEXT NOT NULL,
+  status TEXT NOT NULL CHECK(status IN ('running','complete','failed')),
+  population_count INTEGER NOT NULL, population_hash TEXT NOT NULL,
+  configuration_json TEXT NOT NULL, provenance_json TEXT NOT NULL,
+  summary_json TEXT NOT NULL DEFAULT '{}', limitation_note TEXT
+);
+CREATE TABLE IF NOT EXISTS semantic_profiles (
+  run_id INTEGER NOT NULL REFERENCES semantic_runs(id), kind TEXT NOT NULL,
+  profile_key TEXT NOT NULL, ledger_id INTEGER REFERENCES ledger_entries(id),
+  dims INTEGER NOT NULL CHECK(dims>0), vector BLOB NOT NULL,
+  member_count INTEGER NOT NULL, metadata_json TEXT NOT NULL,
+  PRIMARY KEY(run_id,kind,profile_key)
+);
+CREATE INDEX IF NOT EXISTS semantic_profile_ledger ON semantic_profiles(run_id,ledger_id);
+CREATE TABLE IF NOT EXISTS semantic_results (
+  run_id INTEGER NOT NULL REFERENCES semantic_runs(id), ledger_id INTEGER NOT NULL REFERENCES ledger_entries(id),
+  cluster_id INTEGER, metrics_json TEXT NOT NULL, cues_json TEXT NOT NULL, evidence_json TEXT NOT NULL,
+  PRIMARY KEY(run_id,ledger_id)
+);
 CREATE TABLE IF NOT EXISTS bank_statements (
   id INTEGER PRIMARY KEY, import_id INTEGER NOT NULL REFERENCES imports(id),
   entry_date TEXT, narration TEXT, debit REAL, credit REAL, balance REAL,
@@ -112,6 +132,7 @@ class Store:
     def _migrate(self):
         """Keep engagement databases additive as features are introduced."""
         migrations = [
+            ("ledger_entries", "vendor", "TEXT"),
             ("imports", "expected_rows", "INTEGER"), ("imports", "expected_debits", "REAL"),
             ("imports", "expected_credits", "REAL"), ("imports", "reconciled_at", "REAL"),
             ("imports", "reconciled_by", "TEXT"), ("imports", "reconciliation_note", "TEXT"),

@@ -21,6 +21,7 @@ ALIASES = {
     "description": ("description", "narration", "memo", "particulars"),
     "preparer": ("preparer", "user", "created_by", "posted_by"),
     "reference": ("reference", "reference_no", "document_no", "invoice_no", "voucher_no"),
+    "vendor": ("vendor", "vendor_name", "supplier", "supplier_name"),
     "entity": ("entity", "company", "cost_center", "branch"),
     "is_manual": ("is_manual", "manual", "source_type"),
 }
@@ -124,8 +125,8 @@ def import_gl(store: Store, filename: str, actor="system", mapping=None, expecte
             if debit < 0 or credit < 0 or (debit and credit): raise ValueError("invalid debit/credit values")
             manual = str(r["is_manual"] or "").lower() in ("1", "true", "yes", "manual")
             raw_json = json.dumps(raw, default=str, sort_keys=True); row_hash = hashlib.sha256(raw_json.encode()).hexdigest()
-            store.conn.execute("""INSERT INTO ledger_entries(import_id,entry_id,posting_date,document_date,account_code,debit,credit,signed_amount,description,preparer,reference,entity,is_manual,source_row,source_hash,raw_json)
-                VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""", (import_id, entry_id, posting, _date(r["document_date"]) if r["document_date"] else None, account, debit, credit, debit-credit, r["description"], r["preparer"], r["reference"], r["entity"], int(manual), line, row_hash, raw_json))
+            store.conn.execute("""INSERT INTO ledger_entries(import_id,entry_id,posting_date,document_date,account_code,debit,credit,signed_amount,description,preparer,reference,entity,vendor,is_manual,source_row,source_hash,raw_json)
+                VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""", (import_id, entry_id, posting, _date(r["document_date"]) if r["document_date"] else None, account, debit, credit, debit-credit, r["description"], r["preparer"], r["reference"], r["entity"], (r["vendor"] or None), int(manual), line, row_hash, raw_json))
             accepted += 1; debits += debit; credits += credit
         except (ValueError, TypeError) as e:
             rejected += 1; store.conn.execute("INSERT INTO rejected_rows(import_id,source_row,reason,raw_json) VALUES(?,?,?,?)", (import_id, line, str(e), json.dumps(raw, default=str)))
@@ -139,6 +140,8 @@ def import_coa(store: Store, filename: str, actor="system"):
     if not target.exists(): shutil.copy2(source, target)
     cur = store.conn.execute("INSERT INTO imports(kind,original_name,evidence_path,sha256,imported_at,accepted_rows,rejected_rows) VALUES('coa',?,?,?,?,?,?)", (source.name, str(target), digest, __import__('time').time(), 0, 0)); iid = cur.lastrowid
     for raw in rows:
-        r = {_key(k): v for k, v in raw.items()}; code = r.get("account_code") or r.get("account") or r.get("gl_code")
-        if code: store.conn.execute("INSERT OR REPLACE INTO coa VALUES(?,?,?,?)", (str(code), r.get("account_name") or r.get("name"), r.get("account_type") or r.get("type"), iid))
+        # _key strips non-alphanumerics, so lookups must match that form.
+        r = {_key(k): v for k, v in raw.items()}
+        code = r.get("accountcode") or r.get("account") or r.get("glcode")
+        if code: store.conn.execute("INSERT OR REPLACE INTO coa VALUES(?,?,?,?)", (str(code), r.get("accountname") or r.get("name"), r.get("accounttype") or r.get("type"), iid))
     store.conn.execute("UPDATE imports SET accepted_rows=? WHERE id=?", (len(rows), iid)); store.log(actor, "import_coa", "import", iid, {"rows": len(rows)}); store.conn.commit(); return iid

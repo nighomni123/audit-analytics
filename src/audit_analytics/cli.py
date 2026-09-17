@@ -109,6 +109,17 @@ def main():
 
     analyze_cmd = sub.add_parser("analyze"); analyze_cmd.add_argument("--db", required=True)
     analyze_cmd.add_argument("--actor", default=DEFAULT_ACTOR); analyze_cmd.add_argument("--no-isolation", action="store_true")
+    analyze_cmd.add_argument("--semantic-run", type=int, help="explicit completed semantic profile run to aggregate")
+    profile = sub.add_parser("semantic-profile", help="build experimental local semantic risk profiles")
+    profile.add_argument("--db", required=True); profile.add_argument("--model", default="embeddinggemma")
+    profile.add_argument("--batch-size", type=int, default=64); profile.add_argument("--actor", default=DEFAULT_ACTOR)
+    profile.add_argument("--config", help="JSON file of experimental semantic thresholds and clustering parameters")
+    investigate = sub.add_parser("semantic-investigate", help="read stored semantic investigation evidence offline")
+    investigate.add_argument("--db", required=True); investigate.add_argument("--run", type=int, required=True)
+    investigate.add_argument("--ledger-id", type=int, required=True)
+    evaluate = sub.add_parser("semantic-evaluate", help="evaluate a stored semantic run against authorised labels")
+    evaluate.add_argument("--db", required=True); evaluate.add_argument("--run", type=int, required=True)
+    evaluate.add_argument("--labels", required=True); evaluate.add_argument("--actor", default=DEFAULT_ACTOR)
     embed = sub.add_parser("embed-ledger", help="create local Ollama vectors; no data leaves this host")
     embed.add_argument("--db", required=True); embed.add_argument("--model", default="embeddinggemma")
     embed.add_argument("--batch-size", type=int, default=64); embed.add_argument("--actor", default=DEFAULT_ACTOR)
@@ -222,9 +233,21 @@ def main():
         elif args.cmd == "add-user":
             _require(store, args.actor, ("manager", "partner")); store.add_user(args.username, args.role, args.actor); store.conn.commit(); print(f"user {args.username} is {args.role}")
         elif args.cmd == "analyze":
-            _require(store, args.actor, ("preparer", "reviewer", "manager", "partner")); print(f"analysis run {analyze(store, args.actor, not args.no_isolation)} complete")
+            _require(store, args.actor, ("preparer", "reviewer", "manager", "partner")); print(f"analysis run {analyze(store, args.actor, not args.no_isolation, args.semantic_run)} complete")
         elif args.cmd == "embed-ledger":
             _require(store, args.actor, ("preparer", "reviewer", "manager", "partner")); print(f"embedded {embed_ledger(store, args.model, args.batch_size, args.actor)} changed ledger entries locally")
+        elif args.cmd == "semantic-profile":
+            from .semantic_risk import semantic_profile
+            _require(store, args.actor, ("preparer", "reviewer", "manager", "partner"))
+            config = json.loads(Path(args.config).read_text(encoding="utf-8")) if args.config else None
+            print(json.dumps(semantic_profile(store, args.model, args.batch_size, args.actor, config), indent=2, default=str))
+        elif args.cmd == "semantic-investigate":
+            from .semantic_risk import semantic_investigate
+            print(json.dumps(semantic_investigate(store, args.run, args.ledger_id), indent=2, default=str))
+        elif args.cmd == "semantic-evaluate":
+            from .semantic_evaluation import evaluate_semantic
+            _require(store, args.actor, ("reviewer", "manager", "partner", "quality_reviewer"))
+            print(json.dumps(evaluate_semantic(store, args.run, args.labels, args.actor), indent=2, default=str))
         elif args.cmd == "similar":
             rows = similar_transactions(store, args.query, args.limit, args.model); print(json.dumps({"query": args.query, "count": len(rows), "results": rows}, indent=2))
         elif args.cmd == "review":
@@ -288,7 +311,7 @@ def main():
             print(json.dumps(summary, indent=2, default=str))
         else:
             serve(args.db, args.port)
-    except (ValueError, json.JSONDecodeError) as exc:
+    except (ValueError, LookupError, OSError) as exc:
         p.exit(2, f"error: {exc}\n")
     finally:
         store.close()

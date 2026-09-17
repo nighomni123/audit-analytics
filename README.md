@@ -325,12 +325,68 @@ python3 run.py embed-ledger --db demo/audit.db --model mxbai-embed-large
 python3 run.py similar --db demo/audit.db --model mxbai-embed-large --query "manual year-end tax provision"
 ```
 
+## Semantic Risk Engine v1 (experimental)
+
+The complete implementation roadmap is in `Plan.md`. This opt-in laboratory
+adds narration-only vectors (to avoid account-label leakage), account/vendor/
+preparer/entity profiles, deterministic process clusters, historical novelty,
+vendor shift, account mismatch and peer/cluster outlier cues. It never makes
+an audit conclusion, downloads a model or calls an LLM.
+
+```sh
+python3 run.py semantic-profile --db audit.db --actor engagement-owner
+python3 run.py semantic-investigate --db audit.db --run 1 --ledger-id 42
+python3 run.py analyze --db audit.db --actor engagement-owner --semantic-run 1
+python3 run.py semantic-evaluate --db audit.db --run 1 \
+  --labels examples/semantic/labels.csv --actor engagement-owner
+```
+
+Use evaluation labels matching **your database**, not the example IDs on a
+real ledger. The self-contained synthetic demonstration and label format are
+in `examples/semantic/README.md`. `semantic-profile` accepts `--model`,
+`--batch-size`, and `--config` (a JSON file with keys/defaults documented in
+`Plan.md` and `semantic_risk.DEFAULTS`). A local Ollama service and installed
+model with a resolvable digest are required to build profiles; investigation
+and evaluation read stored evidence and work offline.
+
+Profile construction requires an acknowledged population and an analysis role.
+It stores immutable run vectors, entry/peer snapshots, hashes, model digest,
+registry metadata, effective thresholds, coverage and resource measurements.
+It does not register or validate models automatically. Historical means
+strictly earlier calendar months in this engagement; account/vendor/preparer
+comparisons stay within entity. Missing narration/history/identities and fewer
+than five peers yield unavailable metrics, not a normal result. Cluster names
+are numeric and token-class hints are not authoritative process labels.
+
+Ordinary `analyze` is unchanged. Explicit `--semantic-run` adds **one 20-point
+contribution** if any semantic cue exists (not 20 per correlated cue), preserving
+deterministic evidence and the 100-point cap. Stale or incomplete profiles
+cannot be merged. Workpaper manifests include the linked run provenance.
+
+The review page adds semantic run selection, coverage, and an investigation
+view with peer examples, alternative accounts, related populations, metrics,
+thresholds, source links by ID and suggested evidence. Read-only endpoints:
+`/api/semantic-profile?run=1` and
+`/api/semantic-investigation?run=1&ledger_id=42`.
+`/api/exceptions?run=1` filters the analytical queue by analysis run, not semantic
+run. Omitting the filter preserves the existing all-runs response.
+
+**Known ceilings:** nearest examples use at most 64 deterministically selected
+candidates per comparison, displayed lists are capped, and spherical k-means
+trains on at most 512 vectors for 10 iterations. These are approximations,
+not an indexed nearest-neighbour service. Exact evaluation scans the stored
+population for each labelled query. Profile vectors/evidence are duplicated
+per run for reproducibility, so storage grows with run count. Memory figures
+cover Python allocations, not Ollama/native RAM. Thresholds and real embedding
+quality remain unvalidated; fixed-vector tests only verify mechanics. No
+large-ledger throughput or rendered-browser verification is claimed.
+
 ## Supported GL fields
 
 Headers are matched case-insensitively with common aliases. Required: entry ID,
 posting date, account code, and either signed amount or debit and credit.
 Optional fields include document date, description/narration, preparer/user,
-reference/document number, entity, and manual/system indicator. COA imports
+reference/document number, entity, vendor/supplier, and manual/system indicator. Existing rows without vendor remain missing (no guessed backfill). COA imports
 are supported through `import-coa` and enrich account labels only.
 
 CSV and ordinary first-sheet `.xlsx` exports are supported with the standard

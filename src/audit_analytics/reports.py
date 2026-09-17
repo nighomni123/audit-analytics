@@ -56,6 +56,10 @@ def export_workpaper(store: Store, out: str, actor="system"):
     with destination.open("w", newline="", encoding="utf-8") as f:
         writer = csv.DictWriter(f, fieldnames=fields); writer.writeheader(); writer.writerows(dict(row) for row in rows)
     manifest = {"created_at": time.time(), "workpaper": str(destination), "summary": engagement_summary(store), "source_imports": [{k:r[k] for k in ("id","original_name","sha256","evidence_path")} for r in store.conn.execute("SELECT id,original_name,sha256,evidence_path FROM imports")], "exception_count": len(rows), "limitation": "Risk cues support auditor judgement; they are not findings, fraud determinations, or audit conclusions."}
+    manifest["semantic_runs"] = []
+    for run in store.conn.execute("SELECT id,configuration FROM model_runs ORDER BY id"):
+        semantic = json.loads(run["configuration"]).get("semantic")
+        if semantic: manifest["semantic_runs"].append({"analysis_run_id": run["id"], **semantic})
     manifest_path = destination.with_suffix(destination.suffix + ".manifest.json")
     manifest["workpaper_sha256"] = hashlib.sha256(destination.read_bytes()).hexdigest()
     manifest_path.write_text(json.dumps(manifest, indent=2, default=str), encoding="utf-8")
@@ -103,6 +107,7 @@ def write_engagement_report(store: Store, out: str, actor="system"):
 <ul>
 <li>Tests run: {cell(', '.join(tests_run) if isinstance(tests_run, list) else tests_run)}</li>
 <li>Isolation-style ranking enabled: {cell(run_cfg.get('isolation'))}</li>
+<li>Semantic evidence (explicit opt-in only): {cell(json.dumps(run_cfg.get('semantic', {}), sort_keys=True))}. Experimental thresholds and sampled neighbours require validation; they are not audit conclusions.</li>
 <li>Robust z threshold: {cell(policy.get('outlier_robust_z'))}; round-amount threshold: {cell(policy.get('round_amount_threshold'))}; period-end window: {cell(policy.get('period_end_days'))} days</li>
 <li>Risk cues support auditor judgement; they are not findings, fraud determinations, or audit conclusions. The engagement team evaluates evidence, selects procedures, and reaches conclusions under its approved methodology.</li>
 </ul>"""

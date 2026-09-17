@@ -7,7 +7,7 @@ import time
 from pathlib import Path
 
 CANONICAL_FIELDS = ("entry_id", "posting_date", "account_code", "debit", "credit",
-                    "description", "preparer", "reference", "entity", "is_manual")
+                    "description", "preparer", "reference", "entity", "vendor", "is_manual")
 
 
 class BaseConnector:
@@ -63,6 +63,7 @@ class DemoCsvConnector(BaseConnector):
                     "preparer": g("preparer") or "",
                     "reference": g("reference") or "",
                     "entity": g("entity") or "",
+                    "vendor": g("vendor", "vendor_name", "supplier", "supplier_name") or "",
                     "is_manual": g("is_manual") or "",
                 })
             return rows

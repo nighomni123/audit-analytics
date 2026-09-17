@@ -50,12 +50,21 @@ def _isolation_scores(entries, trees=40, seed=7):
     max_depth = max(depths) or 1
     return {entries[i]["id"]: round(1 - depths[i] / max_depth, 3) for i in range(len(entries))}
 
-def analyze(store: Store, actor="system", include_isolation=True):
+def analyze(store: Store, actor="system", include_isolation=True, semantic_run_id=None):
     if not store.population_acknowledged(): raise ValueError("analysis blocked: acknowledge every GL import's accepted population and control totals first")
     entries = [dict(r) for r in store.conn.execute("SELECT * FROM ledger_entries ORDER BY id")]
     if not entries: raise ValueError("no GL entries imported")
     policy = store.get_setting("analysis_policy", {"round_amount_threshold": 1000, "period_end_days": 3, "outlier_robust_z": 3.5})
     cfg = {"tests": ["duplicate", "round_amount", "period_end", "weekend", "rare_account_user", "reversal", "robust_peer_outlier", "benford"], "isolation": include_isolation and len(entries) >= 256, "policy": policy, "materiality": store.get_setting("materiality", {})}
+    semantic = {}
+    if semantic_run_id is not None:
+        from .semantic_risk import population_hash
+        sr = store.conn.execute("SELECT * FROM semantic_runs WHERE id=?", (semantic_run_id,)).fetchone()
+        if not sr or sr["status"] != "complete": raise ValueError("semantic run must exist and be complete")
+        if sr["population_hash"] != population_hash(store): raise ValueError("semantic run is stale; rebuild the semantic profile")
+        cfg["semantic"] = {"run_id": semantic_run_id, "provenance": json.loads(sr["provenance_json"]), "configuration": json.loads(sr["configuration_json"]), "score_contribution": 20}
+        semantic = {r["ledger_id"]: dict(r) for r in store.conn.execute("SELECT * FROM semantic_results WHERE run_id=?", (semantic_run_id,))}
+        if len(semantic) != len(entries): raise ValueError("semantic run has incomplete population results")
     run = store.conn.execute("INSERT INTO model_runs(started_at,configuration,population_count,status) VALUES(?,?,?,?)", (time.time(), json.dumps(cfg), len(entries), "running")).lastrowid
     reasons, evidence = defaultdict(list), defaultdict(dict)
     by_key = defaultdict(list); by_account = defaultdict(list); by_user_pair = Counter(); ref_key = defaultdict(list)
@@ -105,8 +114,22 @@ def analyze(store: Store, actor="system", include_isolation=True):
     for e in entries:
         iso = isolation.get(e["id"], 0)
         if iso >= 0.72: reasons[e["id"]].append("isolation_style_anomaly"); evidence[e["id"]]["isolation_score"] = iso
+        deterministic_reasons = sorted(set(reasons[e["id"]]))
+        deterministic_score = min(100, 20 * len(deterministic_reasons) + (15 if evidence[e["id"]].get("robust_z", 0) >= 5 else 0) + (15 if iso >= .85 else 0))
+        semantic_cues = json.loads(semantic[e["id"]]["cues_json"]) if semantic else []
+        if semantic:
+            amount_mad = _median_mad([abs(x['signed_amount']) for x in by_account[e['account_code']]])[1] if len(by_account[e['account_code']]) >= 8 else 0
+            signal_status = {
+                'amount': 'flagged' if set(deterministic_reasons) & {'round_amount','robust_account_peer_outlier'} else 'not flagged',
+                'robust_amount_peer': 'flagged' if 'robust_account_peer_outlier' in deterministic_reasons else 'not flagged' if amount_mad else 'not applicable',
+                'timing': 'flagged' if set(deterministic_reasons) & {'period_end_posting','weekend_posting','fiscal_period_end'} else 'not flagged',
+                'frequency': 'flagged' if 'rare_account_preparer_pair' in deterministic_reasons else 'not flagged',
+            }
+            reasons[e["id"]].extend(semantic_cues)
+            evidence[e["id"]]["semantic"] = {"run_id": semantic_run_id, "metrics": json.loads(semantic[e["id"]]["metrics_json"]), "cues": semantic_cues, "evidence": json.loads(semantic[e["id"]]["evidence_json"])}
+            evidence[e["id"]]["signal_components"] = {"status": signal_status, "deterministic_reasons": deterministic_reasons, "semantic_reasons": semantic_cues, "deterministic_score": deterministic_score, "semantic_contribution": 20 if semantic_cues else 0, "note": "Correlated semantic cues contribute once. Unflagged signals do not establish correctness."}
         if not reasons[e["id"]]: continue
-        score = min(100, 20 * len(set(reasons[e["id"]])) + (15 if evidence[e["id"]].get("robust_z", 0) >= 5 else 0) + (15 if iso >= .85 else 0))
+        score = min(100, deterministic_score + (20 if semantic_cues else 0))
         severity = "high" if score >= 70 else "medium" if score >= 40 else "low"
         # ponytail: materiality is a DISCLOSED planning label only — it never
         # changes the risk score or severity (IMPLEMENTATION_PLAN §8 1.1).
@@ -122,6 +145,10 @@ def analyze(store: Store, actor="system", include_isolation=True):
             band = "below"
         store.conn.execute("INSERT INTO exceptions(run_id,ledger_id,risk_score,severity,reasons_json,evidence_json,materiality_band) VALUES(?,?,?,?,?,?,?)", (run, e["id"], score, severity, json.dumps(sorted(set(reasons[e["id"]]))), json.dumps(evidence[e["id"]], sort_keys=True), band))
     limitation = "Benford: " + (benford.get("note") or benford.get("reason", "not applicable"))
+    if semantic_run_id is not None:
+        provenance = cfg["semantic"]["provenance"]
+        store.conn.execute("UPDATE model_runs SET model_name=?,validation_status=? WHERE id=?", (provenance.get("model"), provenance.get("validation_status", "unregistered"), run))
+        limitation += "; Experimental semantic cues support investigation, not audit conclusions. Correlated semantic cues contribute at most 20 points."
     store.conn.execute("UPDATE model_runs SET completed_at=?,status='complete',limitation_note=? WHERE id=?", (time.time(), limitation, run))
     store.log(actor, "analyze", "model_run", run, {"population": len(entries), "benford": benford, "isolation_enabled": bool(isolation)})
     store.conn.commit(); return run

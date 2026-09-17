@@ -1,0 +1,27 @@
+entry_id,posting_date,account_code,amount,description,vendor,preparer,entity
+R1,2025-01-05,6100,120,Repair office pump,Acme Repairs,Ana,HQ
+R2,2025-02-06,6100,135,Repair office pump seal,Acme Repairs,Ana,HQ
+R3,2025-03-07,6100,118,Repair office pump gasket,Acme Repairs,Ana,HQ
+F1,2025-01-08,6200,400,Monthly professional fees,Legal Co,Ben,HQ
+F2,2025-02-08,6200,410,Monthly professional fees retainer,Legal Co,Ben,HQ
+F3,2025-03-08,6200,405,Monthly professional fees advice,Legal Co,Ben,HQ
+P1,2025-01-10,6300,5000,Payroll January,Payroll,Bob,HQ
+P2,2025-02-10,6300,5020,Payroll February,Payroll,Bob,HQ
+P3,2025-03-10,6300,5010,Payroll March,Payroll,Bob,HQ
+A1,2025-03-12,6100,450,Strategic advisory engagement,Advisory Inc,Cid,HQ
+V1,2025-03-13,6100,130,Strategic advisory consulting fees,Acme Repairs,Ana,HQ
+N1,2025-03-14,6400,900,Cryogenic valve calibration,Zeta Labs,Ana,HQ
+C1,2025-03-15,6100,122,Repair office lobby paint,Acme Repairs,Ana,HQ
+G1,2025-03-16,6200,50,,Legal Co,Ben,HQ
+S1,2025-03-17,6300,5015,Payroll March adjustment,Payroll,,HQ
+R4,2025-01-09,6100,125,Repair pump bearing,Acme Repairs,Ana,HQ
+R5,2025-01-16,6100,132,Repair pump housing,Acme Repairs,Ana,HQ
+R6,2025-02-11,6100,121,Repair pump rotor,Acme Repairs,Ana,HQ
+R7,2025-02-18,6100,129,Repair pump motor,Acme Repairs,Ana,HQ
+F4,2025-01-09,6200,402,Professional fees contract advice,Legal Co,Ben,HQ
+F5,2025-02-09,6200,412,Professional fees compliance advice,Legal Co,Ben,HQ
+F6,2025-02-12,6200,406,Professional fees consulting,Legal Co,Ben,HQ
+P4,2025-01-15,6300,5005,Payroll employee wages,Payroll,Bob,HQ
+P5,2025-02-15,6300,5025,Payroll employee salaries,Payroll,Bob,HQ
+P6,2025-02-20,6300,5012,Payroll staff wages,Payroll,Bob,HQ
+O1,2025-03-18,6100,126,Unusual cryogenic orbital calibration,Zeta Labs,Ana,HQ
