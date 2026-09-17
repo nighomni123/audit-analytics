@@ -23,8 +23,8 @@ product semantics, pricing, and demand signals were intentionally **not** reused
 ## 2. Verified current state (as of the abrupt stop)
 
 ```sh
-python3 run.py --help                       # 18 subcommands listed below
-PYTHONPATH=src python3 -m unittest discover -s tests -v   # 4 tests, all OK
+python3 run.py --help                       # 30+ subcommands listed below
+PYTHONPATH=src python3 -m pytest tests/ -q   # 25 tests, all pass
 ```
 
 - `tests/test_cli_workflow.py` — full CLI integration: init → add-user →
@@ -33,34 +33,59 @@ PYTHONPATH=src python3 -m unittest discover -s tests -v   # 4 tests, all OK
 - `tests/test_pipeline.py` — analysis blocked until GL import is acknowledged.
 - `tests/test_semantic.py` — token classifier + similarity work with **no** model
   service (semantic is an additive, optional layer).
+- `tests/test_semantic_risk_core.py` — semantic lifecycle, null/sparse/zero
+  clusters, malformed-vector rollback, cache reuse, embed-ledger batch.
+- `tests/test_semantic_evaluation.py` — precision/recall, mismatch metrics,
+  cue false positives on negatives, label validation.
+- `tests/test_semantic_integration.py` — full E2E: import → acknowledge →
+  profile → analyze (baseline + opt-in) → investigate → evaluate → export →
+  live HTTP checks (profile/investigation/queue/400/404/stale).
+- `tests/test_materiality.py` — disclosed planning labels, materiality-banded
+  sampling, report sections.
+- `tests/test_analytics_features.py` — fiscal-calendar trigger, taxonomy tagging.
+- `tests/test_server_endpoints.py` — server import + route presence.
+- `tests/test_model_registry.py`, `test_bank.py`, `test_connectors.py`,
+  `test_reports_features.py` — registry, bank, connectors, reports.
 
-All four pass. Nothing is half-written on disk; the MVP is functional end-to-end.
+All 25 pass. Nothing is half-written on disk; the MVP is functional end-to-end.
 
 ## 3. Module map (where everything lives)
 
 ```
 run.py                  entrypoint → src/audit_analytics/cli.py
 src/audit_analytics/
-  cli.py                argparse surface; one branch per subcommand (170 lines)
+  cli.py                argparse surface; one branch per subcommand
   store.py              SQLite Store: schema, users/roles, settings, audit_log,
-                        reconciliation(); the system of record
+                         reconciliation(); the system of record
   importer.py           import_gl, import_coa, preview_gl (aliases, evidence copy,
-                        SHA-256, rejected_rows, control totals)
+                         SHA-256, rejected_rows, control totals)
   analytics.py          analyze(store, actor, use_isolation): deterministic cues +
-                        optional isolation-style ranking (pop ≥ 256)
+                         optional isolation-style ranking (pop ≥ 256); semantic
+                         run integration via analysis_signal_results
   semantic.py           token classifier + optional Ollama embeddings;
-                        similar_transactions() = max(token, cosine)
+                         similar_transactions() = max(token, cosine)
+  semantic_risk.py      semantic_profile, semantic_investigate,
+                         _analysis_components (snapshot/legacy/unavailable);
+                         k-means clustering, metrics, cues, lifecycle
+  semantic_evaluation.py evaluate_semantic: offline label-based precision/recall,
+                         mismatch metrics, cue FP check, report + audit log
+  bank.py               import-bank, reconcile-bank (bank_statements/bank_matches)
   sampling.py           create_sample(): high-risk + top-ranked + seeded random
   reports.py            engagement_summary, export_workpaper (+ manifest),
-                        write_engagement_report (HTML)
+                         write_engagement_report (HTML)
   server.py             serve(): localhost UI on :8788
-tests/                  the 4 test files above
+  connectors.py         BaseConnector + DemoCsvConnector + run_connector
+  model_registry.py     register_model/validate_model/list_models/stamp_run
+tests/                  12 test files (25 tests total)
 ```
 
 CLI subcommands: `init, import-gl, import-coa, preview-gl, save-mapping,
 list-mappings, acknowledge-population, configure, add-user, analyze,
 embed-ledger, similar, review, assign, create-sample, export, report, status,
-serve`.
+serve, semantic-profile, semantic-investigate, semantic-evaluate,
+import-account-taxonomy, set-fiscal-calendar, compare-runs, lock-reviews,
+reopen-reviews, import-connector, import-bank, reconcile-bank,
+register-model, validate-model, list-models`.
 
 ## 4. qcom-scraping → Audit Analytics translation (the design spine)
 
@@ -90,6 +115,18 @@ serve`.
   `--no-isolation`). Every exception carries reasons + peer context.
 - Local semantic search (token classifier always; Ollama `embeddinggemma`
   optional; `max(token, cosine)` so semantics only *expands* candidates).
+- **Semantic Risk Engine v1 (experimental, opt-in):** narration-only
+  vectors (no account/label leakage), versioned `semantic_runs`,
+  `semantic_profiles` (transaction/account/vendor/preparer/entity/process),
+  `semantic_results` with cues/metrics/evidence, `analysis_signal_results`
+  for zero-cue retention. Deterministic k-means (seed 7, k≤12, ≤512
+  training, ≤64 candidates), signed cosine metrics, historical novelty,
+  vendor shift, account mismatch, peer/cluster outlier cues. Lifecycle:
+  digest resolve, transaction rollback on failure, stale-population
+  rejection. Offline evaluation against authorised labels (precision@10,
+  recall@20, mismatch precision/recall, cluster purity, FP on negatives).
+  Review investigation page with Why flagged / Normal peers / Alternative
+  matches / Related population / Other signals / Suggested evidence.
 - Review workflow: dispositions `open|cleared|follow_up|selected_for_testing`,
   append-only `reviews` + `audit_log`. Assignments, due dates, reproducible
   sampling, CSV workpaper export + JSON manifest, HTML engagement report.
@@ -201,7 +238,18 @@ exceptions now carry a disclosed `materiality_band` (`above_overall` /
 slice to entries at/above performance materiality (`--random-min-amount`
 override). `write_engagement_report` now renders a Reconciliation table plus
 Materiality and Methodology/Limitations sections. Covered by
-`tests/test_materiality.py` (3 tests); full suite passes (7/7).
+`tests/test_materiality.py` (3 tests).
+
+**Status update (Phase 1 semantic risk engine):** Phase 1A–1E fully delivered:
+`semantic_risk.py` (narration-only vectors, k-means clustering, metrics, cues,
+investigation with snapshot/legacy/unavailable components), `semantic.py`
+(token classifier + Ollama transport with redirect/loopback guards),
+`semantic_evaluation.py` (offline label-based precision/recall, mismatch
+metrics, cue false-positive check), `analysis_signal_results` table for
+zero-cue evidence retention, `examples/semantic/` fixtures with labels, and
+`tests/test_semantic_risk_core.py`, `test_semantic_evaluation.py`,
+`test_semantic_integration.py`. Browser verification via Playwright passes at
+1440×1000 and 390×1000 (`tests/browser_review.cjs`).
 
 **Status update (continued):** The remaining local, dependency-free work across
 Releases 1.1–1.4 was delivered in one fan-out:
@@ -211,4 +259,4 @@ Releases 1.1–1.4 was delivered in one fan-out:
 - **3** – `bank.py` (`import-bank`, `reconcile-bank`, `bank_statements`/`bank_matches`); vendor/customer/PO graphs deferred.
 - **4** – `model_registry.py` (`register_model`/`validate_model`/`list_models`/`stamp_run`) recording provenance/approval; actual statistical validation **deferred** (needs labelled authorised data).
 
-Full suite passes (15/15). Deferred items require firm-only resources (SSO infra, ERP credentials, labelled validation data) and were intentionally NOT faked. See `IMPLEMENTATION_PLAN.md` §8 for the per-item delivered/deferred notes.
+Full suite passes (25/25). Deferred items require firm-only resources (SSO infra, ERP credentials, labelled validation data) and were intentionally NOT faked. See `IMPLEMENTATION_PLAN.md` §8 for the per-item delivered/deferred notes.

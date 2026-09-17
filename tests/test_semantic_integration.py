@@ -62,6 +62,26 @@ class SemanticWorkflowTest(unittest.TestCase):
             self.assertIn('semantic_vendor_shift',semantic_investigate(store,rid,v)['cues'])
             baseline=analyze(store,'owner',False)
             combined=analyze(store,'owner',False,rid)
+            # Zero-cue entries keep their signal snapshot even without an exception row.
+            zero=[r['ledger_id'] for r in store.conn.execute('SELECT * FROM exceptions WHERE run_id=?',(combined,))]+[
+                  r[0] for r in store.conn.execute('SELECT id FROM ledger_entries ORDER BY id')]
+            zero_cue=[l for l in zero if not store.conn.execute('SELECT COUNT(*) FROM exceptions WHERE run_id=? AND ledger_id=?',(combined,l)).fetchone()[0]]
+            self.assertTrue(zero_cue,'fixture should contain entries with no cues')
+            for l in zero_cue:
+                snap=store.conn.execute('SELECT components_json FROM analysis_signal_results WHERE run_id=? AND ledger_id=?',(combined,l)).fetchone()
+                self.assertIsNotNone(snap,f'snapshot missing for zero-cue ledger {l}')
+                comps=json.loads(snap[0])
+                self.assertEqual(comps['semantic_contribution'],0)
+                self.assertEqual(comps['semantic_reasons'],[])
+            self.assertEqual(store.conn.execute('SELECT COUNT(*) FROM analysis_signal_results WHERE run_id=?',(combined,)).fetchone()[0],
+                             store.conn.execute('SELECT COUNT(*) FROM ledger_entries').fetchone()[0])
+            self.assertEqual(store.conn.execute('SELECT COUNT(*) FROM analysis_signal_results WHERE run_id=?',(baseline,)).fetchone()[0],0)
+            # Investigation returns snapshot-backed components for a zero-cue entry.
+            inv0=semantic_investigate(store,rid,zero_cue[0])
+            sig0=inv0['other_signals'][0]
+            self.assertEqual(sig0['components_source'],'analysis_snapshot')
+            self.assertEqual(sig0['components']['semantic_contribution'],0)
+            self.assertEqual(sig0['analysis_run_id'],combined)
             scores={r['ledger_id']:r['risk_score'] for r in store.conn.execute('SELECT * FROM exceptions WHERE run_id=?',(baseline,))}
             for row in store.conn.execute('SELECT * FROM exceptions WHERE run_id=?',(combined,)):
                 evidence=json.loads(row['evidence_json'])
@@ -93,6 +113,7 @@ class SemanticWorkflowTest(unittest.TestCase):
                 self.assertEqual(investigation['entry']['entry_id'],'A1')
                 for key in ('run_id','ledger_id','stale','entry','cluster_id','metrics','cues','evidence','other_signals','provenance'):
                     self.assertIn(key,investigation)
+                self.assertEqual(investigation['other_signals'][0]['components_source'],'analysis_snapshot')
                 for key in ('normal_peers','alternative_matches','related_population','comparisons','suggested_evidence','limitations'):
                     self.assertIn(key,investigation['evidence'])
                 self.assertTrue(all(x['run_id']==combined for x in get(f'/api/exceptions?run={combined}')['rows']))

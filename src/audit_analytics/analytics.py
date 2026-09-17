@@ -128,6 +128,7 @@ def analyze(store: Store, actor="system", include_isolation=True, semantic_run_i
             reasons[e["id"]].extend(semantic_cues)
             evidence[e["id"]]["semantic"] = {"run_id": semantic_run_id, "metrics": json.loads(semantic[e["id"]]["metrics_json"]), "cues": semantic_cues, "evidence": json.loads(semantic[e["id"]]["evidence_json"])}
             evidence[e["id"]]["signal_components"] = {"status": signal_status, "deterministic_reasons": deterministic_reasons, "semantic_reasons": semantic_cues, "deterministic_score": deterministic_score, "semantic_contribution": 20 if semantic_cues else 0, "note": "Correlated semantic cues contribute once. Unflagged signals do not establish correctness."}
+            store.conn.execute("INSERT OR REPLACE INTO analysis_signal_results(run_id, ledger_id, components_json) VALUES(?,?,?)", (run, e["id"], json.dumps(evidence[e["id"]]["signal_components"], sort_keys=True)))
         if not reasons[e["id"]]: continue
         score = min(100, deterministic_score + (20 if semantic_cues else 0))
         severity = "high" if score >= 70 else "medium" if score >= 40 else "low"

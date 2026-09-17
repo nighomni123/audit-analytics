@@ -341,6 +341,13 @@ python3 run.py semantic-evaluate --db audit.db --run 1 \
   --labels examples/semantic/labels.csv --actor engagement-owner
 ```
 
+A follow-up fix ensures entries with no semantic cues still retain their
+signal-snapshot evidence (linked analysis results, not "not evaluated").
+The `analysis_signal_results` table stores `components_json` per
+(run_id, ledger_id) for every entry in a semantic-linked analysis run;
+investigation resolves components as snapshot → legacy exception
+fallback → unavailable, never labelling missing evidence as normal.
+
 Use evaluation labels matching **your database**, not the example IDs on a
 real ledger. The self-contained synthetic demonstration and label format are
 in `examples/semantic/README.md`. `semantic-profile` accepts `--model`,
@@ -379,7 +386,12 @@ population for each labelled query. Profile vectors/evidence are duplicated
 per run for reproducibility, so storage grows with run count. Memory figures
 cover Python allocations, not Ollama/native RAM. Thresholds and real embedding
 quality remain unvalidated; fixed-vector tests only verify mechanics. No
-large-ledger throughput or rendered-browser verification is claimed.
+large-ledger throughput is claimed. Chromium/Playwright rendering and interaction
+checks pass at 1440px desktop and 390px mobile widths, using a temporary
+synthetic engagement. Reproduce with `PYTHONPATH=src python3 -u tests/browser_fixture.py`,
+then `PLAYWRIGHT_MODULE=/path/to/playwright node tests/browser_review.cjs URL`,
+using the printed `BROWSER_URL`. The check captures screenshots under
+`/tmp/audit-browser-review`; it does not require installing project dependencies.
 
 ## Supported GL fields
 
@@ -437,3 +449,48 @@ send client data off the engagement host.
 The controls are designed to support documentation under SA 230 and journal
 entry procedures under SA 240; the engagement team remains responsible for
 audit design, evidence evaluation, and conclusions.
+
+## Future plans (deferred; see IMPLEMENTATION_PLAN.md for full roadmap)
+
+These are future directions, not current features. Each requires firm
+approval, authorised data, or validated methodology before implementation.
+
+- **Release 1.1 — audit-methodology hardening:** import-mapping preview
+  and saved per-engagement mapping profiles; structured client control-total
+  reconciliation; materiality as disclosed planning thresholds (delivered —
+  `materiality_band`, `--random-min-amount`); account labels/type filters;
+  fiscal-calendar controls; workbook/PDF output; model-run comparison;
+  formal methodology/limitations report.
+- **Release 1.2 — review governance:** local user roles (preparer,
+  reviewer, engagement manager, quality reviewer); second-level approval
+  for cleared high-severity exceptions; lock/reopen completed review sets;
+  signed export manifests with SHA-256 workpaper and manifest hashes.
+- **Release 2 — controlled ERP connectors:** read-only adapters for SAP,
+  Oracle, Tally, QuickBooks and approved systems, each producing a
+  connector-run manifest (authorization identity, query/version,
+  extraction timestamp, record count, control totals, source identifiers).
+  Requires firm-authorized access + data dictionary per adapter. The
+  `demo_csv` connector interface is proven and ready to extend; real
+  adapters are **DEFERRED**.
+- **Release 3 — expanded forensic datasets:** vendor/customer masters,
+  bank extracts (delivered — `import-bank`/`reconcile-bank`), invoices,
+  purchase orders, and related-party datasets as separate normalized
+  evidence types. Graph and text-similarity analysis only with explicit
+  coverage and false-positive controls.
+- **Release 4 — validated advanced models:** governed model registry
+  (delivered for provenance/approval metadata only) to replace the
+  compact isolation-style scorer **only after** documented validation
+  across representative, authorised audit populations. Actual statistical
+  validation, calibration, drift checks, and approval workflows are
+  **DEFERRED** — they require labelled, authorised audit populations and
+  governance sign-off. The isolation scorer remains the only active model
+  and is disableable per run.
+- **Semantic Risk Engine:** Phase 1 (A–E) is delivered and documented in
+  `Plan.md`. Future phases (investigation assistant, calibrated multi-detector
+  aggregation, governed feedback) are deferred and require authorised
+  validation before promotion beyond laboratory use.
+
+**Important:** This is a local-first laboratory tool, not a production
+audit system. It never issues audit opinions, determines fraud, or
+treats risk scores as findings. No outbound network calls are made for
+engagement data without an explicitly approved connector or feature.

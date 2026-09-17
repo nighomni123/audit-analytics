@@ -281,6 +281,19 @@ def _positive(value,name):
     if isinstance(value,bool) or not isinstance(value,int) or value<=0: raise ValueError(name+' must be a positive integer')
 
 
+def _analysis_components(store, run_id, ledger_id):
+    """Components for a linked analysis run: snapshot first, legacy exception fallback, else unavailable."""
+    row = store.conn.execute('SELECT components_json FROM analysis_signal_results WHERE run_id=? AND ledger_id=?', (run_id, ledger_id)).fetchone()
+    if row: return json.loads(row['components_json']), 'analysis_snapshot'
+    for a in store.conn.execute("SELECT id,configuration FROM model_runs WHERE status='complete' ORDER BY id DESC"):
+        if json.loads(a['configuration']).get('semantic',{}).get('run_id')!=run_id: continue
+        ex = store.conn.execute('SELECT evidence_json FROM exceptions WHERE run_id=? AND ledger_id=?', (a['id'], ledger_id)).fetchone()
+        if ex:
+            components = json.loads(ex['evidence_json']).get('signal_components')
+            if components is not None: return components, 'legacy_exception'
+    return None, 'unavailable'
+
+
 def get_semantic_profile(store,run_id=None):
     if run_id is not None: _positive(run_id,'run')
     row=store.conn.execute('SELECT * FROM semantic_runs WHERE id=?',(run_id,)).fetchone() if run_id else store.conn.execute("SELECT * FROM semantic_runs WHERE status='complete' ORDER BY id DESC LIMIT 1").fetchone()
@@ -301,5 +314,7 @@ def semantic_investigate(store,run_id,ledger_id):
     for a in store.conn.execute('SELECT id,configuration FROM model_runs WHERE status=? ORDER BY id DESC',('complete',)):
         if json.loads(a['configuration']).get('semantic',{}).get('run_id')!=run_id: continue
         ex=store.conn.execute('SELECT reasons_json,evidence_json FROM exceptions WHERE run_id=? AND ledger_id=?',(a['id'],ledger_id)).fetchone()
-        other.append({'analysis_run_id':a['id'],'reasons':json.loads(ex['reasons_json']) if ex else [],'components':json.loads(ex['evidence_json']).get('signal_components') if ex else None})
+        components,source=_analysis_components(store,a['id'],ledger_id)
+        other.append({'analysis_run_id':a['id'],'reasons':json.loads(ex['reasons_json']) if ex else [],
+                      'components':components,'components_source':source})
     return {'run_id':run_id,'ledger_id':ledger_id,'stale':run['stale'],'entry':evidence['entry'],'cluster_id':r['cluster_id'],'metrics':json.loads(r['metrics_json']),'cues':json.loads(r['cues_json']),'evidence':evidence,'other_signals':other,'provenance':run['provenance']}

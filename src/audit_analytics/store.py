@@ -57,6 +57,10 @@ CREATE TABLE IF NOT EXISTS model_runs (
   id INTEGER PRIMARY KEY, started_at REAL NOT NULL, completed_at REAL, configuration TEXT NOT NULL,
   population_count INTEGER NOT NULL, status TEXT NOT NULL, limitation_note TEXT
 );
+CREATE TABLE IF NOT EXISTS analysis_signal_results (
+  run_id INTEGER NOT NULL REFERENCES model_runs(id), ledger_id INTEGER NOT NULL REFERENCES ledger_entries(id),
+  components_json TEXT NOT NULL, PRIMARY KEY(run_id, ledger_id)
+);
 CREATE TABLE IF NOT EXISTS exceptions (
   id INTEGER PRIMARY KEY, run_id INTEGER NOT NULL REFERENCES model_runs(id), ledger_id INTEGER NOT NULL REFERENCES ledger_entries(id),
   risk_score REAL NOT NULL, severity TEXT NOT NULL, reasons_json TEXT NOT NULL,

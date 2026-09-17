@@ -12,6 +12,10 @@ engagements/
 exports/
 backups/
 
+# Local tooling / raw datasets — never commit
+.monid-xdg/
+data/
+
 # Secrets / local env
 .env
 .env.example
