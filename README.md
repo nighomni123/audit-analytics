@@ -4,7 +4,67 @@ Local-first journal-entry analytics for Indian statutory-audit teams. It ranks
 explainable risk cues for auditor review; it does not make audit conclusions or
 issue an opinion.
 
-## 5-minute demo (synthetic data, verified)
+```text
+What it does
+Import a client's GL → check the population → analyze the entire ledger →
+surface explainable risk cues → investigate selected entries → document the review.
+
+It does not decide whether something is fraud or an audit finding.
+It helps the auditor decide what deserves attention.
+```
+
+### Architecture (one picture)
+
+```
+Client GL
+   ↓
+Population check (reconcile controls)
+   ↓
+┌──────────────┴──────────────┐
+↓                             ↓
+Deterministic analytics     Semantic analytics
+(amount, timing, peers)     (local embeddings / similarity)
+│                             │
+└──────────────┬──────────────┘
+               ↓
+       Ranked risk cues
+               ↓
+      Auditor investigation
+               ↓
+     Workpaper / review record
+```
+
+**Risk cue:** a transaction or pattern the analytics flags as unusual enough to warrant human review. A risk cue is not a finding of error, fraud, or misstatement.
+
+```text
+Example — journal entry ₹8,240,000 to Repairs & Maintenance
+Risk cues: posted at period end; unusually large for account; narration unlike normal activity
+Result: placed higher in review queue
+Auditor action: investigates supporting evidence
+```
+
+### Privacy first
+
+✓ Client GL stays on the machine  
+✓ SQLite engagement database is local  
+✓ Evidence files remain local  
+✓ Embeddings run through local Ollama (optional)  
+✓ No cloud AI API required; no client ledger upload  
+✓ No external service is required for core analysis
+
+> **Local-first does not automatically mean secure in every deployment.** Engagement folders, backups, devices, and any network deployment still need the firm's approved security controls.
+
+### Vocabulary (used consistently below)
+
+| Term | Meaning |
+| --- | --- |
+| **Journal entry** | One imported GL line |
+| **Risk cue** | Analytical signal worth reviewing |
+| **Analysis run** | One complete deterministic/semantic pipeline execution |
+| **Investigation** | Auditor examination of a selected journal entry |
+| **Disposition** | Auditor's recorded review outcome |
+
+## CLI / developer demo (synthetic data, verified)
 
 No client ledger? The repo ships a 400-row synthetic GL (`examples/`, generated
 locally, no real client data) with a `demo-ground-truth.csv` of planted
@@ -23,58 +83,59 @@ python3 run.py report --db demo-engagement.db --out demo-report.html --actor rev
 python3 run.py serve --db demo-engagement.db   # review UI on http://127.0.0.1:8788
 ```
 
-What you should see: the run raises 148 scored exceptions; 4 of the 5
-date-visible planted anomalies surface (`JE035497` rank 9 via `round_amount`,
-two benford-vendor entries rank 14/22 via `robust_account_peer_outlier`, one
-at 122), one is missed. That is the honest point of this tool: cues with
-reasons and evidence, ranked for a human — not a black-box verdict.
-(`off_hours` in the ground truth is undetectable by design: the schema stores
-posting dates, not timestamps.)
+What you should see: a complete end-to-end run with the synthetic dataset (400 rows, control totals match). The tool surfaces explainable risk cues — not fraud findings — for auditor review.
 
-## Visual walkthrough (synthetic demo)
+### Technical validation (synthetic ground-truth)
+The synthetic dataset raises 148 scored exceptions; 4 of 5 planted anomalies surface (`JE035497` rank 9 via `round_amount`, two benford-vendor entries rank 14/22 via `robust_account_peer_outlier`, one at 122), one is missed by design (`off_hours` is undetectable — schema stores posting dates, not timestamps). This is evidence of how the system behaves; not a claim about real ledgers.
 
-Every image below uses only the synthetic 400-row GL (`examples/demo-journal-entries.csv`) and `demo-ground-truth.csv`. No real client data appears.
+## See it in action (visual walkthrough)
 
-### 0. Download or clone the repo
-![Download / clone repo](docs/screenshots/00-download.png)
-Clone with `git clone` or download the ZIP; all commands below run from this folder.
+Every image uses only the synthetic 400-row GL (`examples/demo-journal-entries.csv`). No real client data appears.
 
-### 1. Initialise the synthetic engagement
+### 1. Create engagement
 ![Init demo DB](docs/screenshots/01-init.png)
-`python3 run.py init --db demo-engagement.db --client "Demo Textiles Ltd" --period 2025-01-01:2026-03-31 --owner reviewer`
+`
+python3 run.py init --db demo-engagement.db --client "Demo Textiles Ltd" ...
+`
 
-### 2. Import the synthetic GL (400 rows)
+### 2. Import GL
 ![Import synthetic GL](docs/screenshots/02-import-gl.png)
-`python3 run.py import-gl --db demo-engagement.db --file examples/demo-journal-entries.csv --actor reviewer --expected-rows 400 --expected-debits 3496407.62 --expected-credits 0`
-Reconciliation shows `matches: true`; all 400 rows accepted.
+Import and reconcile the population.
 
-### 3. Acknowledge the population
+### 3. Confirm population
 ![Acknowledge population](docs/screenshots/03-ack.png)
-`python3 run.py acknowledge-population --db demo-engagement.db --reviewer reviewer --note "demo: synthetic 400-row GL, control totals match"`
-Analysis is blocked until this step is completed.
+A reviewer acknowledges control totals.
 
-### 4. Run analysis (148 scored exceptions)
-![Run analysis](docs/screenshots/04-analyze.png)
-`python3 run.py analyze --db demo-engagement.db --actor reviewer`
-The synthetic dataset produces 148 scored exceptions; 4 of 5 planted anomalies surface.
-
-### 5. Generate the HTML report
-![Generate report](docs/screenshots/05-report-html.png)
-`python3 run.py report --db demo-engagement.db --out docs/screenshots/demo-report.html --actor reviewer`
-Produces a readable engagement summary.
-
-### 6. Start the local review UI
+### 4. Review risk dashboard
 ![Serve web UI (desktop)](docs/screenshots/05-serve-ui.png)  
 ![Serve web UI (mobile 390px)](docs/screenshots/06-serve-ui-mobile.png)
-`python3 run.py serve --db demo-engagement.db` → open `http://127.0.0.1:8788`. The review page shows exception rankings, evidence links, and dispositions (`open`, `cleared`, `follow_up`, `selected_for_testing`).
+Open `http://127.0.0.1:8788`; see ranked exceptions, evidence links, and dispositions.
 
-### 7. Exception detail view (UI)
+### 5. Investigate a transaction
 ![Exception detail in UI](docs/screenshots/07-serve-exception-detail.png)
-Each exception carries evidence links, robust-account-peer outlier scores, and Benford checks — not a black-box verdict.
+Each cue carries reasons and links — not a black-box verdict.
+
+### 6. Export / document
+![Generate report](docs/screenshots/05-report-html.png)
+Generate a readable HTML workpaper summary.
+
+> Earlier steps (download/clone, CLI outputs, mobile view) are in `docs/screenshots/` if you want the full sequence.
 
 Real ledgers with non-canonical headers? Pass a header-mapping profile like
 `examples/demo-mapping.json` (`--mapping examples/demo-mapping.json`) or save
 one with `save-mapping` for reuse across engagements.
+
+## Quick start (user experience)
+
+1. Launch / open the workbench  
+2. Create/open an engagement  
+3. Import your client's GL  
+4. Confirm population (reconcile control totals)  
+5. Run analysis → see risk dashboard  
+6. Investigate selected entries → record disposition  
+7. Export workpaper / report
+
+The GUI binds to `localhost`; nothing uploads client data. See the [CLI / developer demo](#cli--developer-demo-synthetic-data-verified) for the current command-line equivalent.
 
 ## Step-by-step: first engagement
 
@@ -318,121 +379,15 @@ engagement summary. Archive the database, `evidence/` directory, exports, and
 firm-prescribed workpapers together using the firm’s approved retention and
 backup process.
 
-## Local semantic transaction search
+## Local AI (optional)
 
-Token classification works immediately and labels account/narration concepts
-such as cash/bank, revenue, payroll, tax, inventory, and intercompany. To add
-meaning-level similarity without moving ledger data off the engagement host,
-install and run Ollama locally, then build a local vector index:
+Audit Analytics can use locally running embedding models to understand whether differently worded transactions are semantically similar — for example `"March GST liability provision"` ≈ `"GST payable accrued for March"`. The model helps find related or unusual transactions; it does not make an audit conclusion.
 
-```sh
-ollama serve                 # in a separate terminal
-ollama pull embeddinggemma
-python3 run.py embed-ledger --db demo/audit.db
-python3 run.py similar --db demo/audit.db --query "manual year-end tax provision" --limit 20
-```
+To use it: install and run Ollama locally (`ollama serve`; `ollama pull embeddinggemma`), then build the index (`python3 run.py embed-ledger`) and query (`similar --db demo/audit.db --query "..."`). Technical details (models, evaluation framework, ceilings, vector-storage notes) are in [`docs/SEMANTIC_ENGINE.md`](docs/SEMANTIC_ENGINE.md).
 
-The `similar` command falls back to transparent token/account-head matching
-when no vectors have been built. Once vectors exist, its final score is the
-maximum of token and cosine similarity, so semantic matching can surface a
-worded-differently transaction but cannot hide a strong lexical match. The API
-equivalent is `GET /api/similar?q=manual%20year-end%20tax%20provision`.
+## Semantic Risk Engine (experimental lab)
 
-### Recommended local embedding models
-
-Use one approved model per engagement and rebuild that model's ledger index
-before comparing results. Model choice changes retrieval candidates; it must be
-recorded in the engagement methodology/workpaper, validated on representative
-approved data, and never be used as an automatic conclusion.
-
-| Model | Recommendation | Use it when | Command |
-| --- | --- | --- | --- |
-| `embeddinggemma` | **Default.** A compact multilingual embedding model suited to local retrieval, classification, and clustering. | Most engagements, especially where narrations include Indian-language or mixed-language terms, or workstation resources are limited. | `ollama pull embeddinggemma` |
-| `nomic-embed-text` | Fast English-first comparison baseline with a large text context window. | Narrations and account heads are predominantly English and the firm wants a second retrieval benchmark. | `ollama pull nomic-embed-text` |
-| `mxbai-embed-large` | Quality-focused alternative with a larger local resource footprint. | A controlled pilot shows that it retrieves materially better complex-transaction candidates on the firm's labelled evaluation set. | `ollama pull mxbai-embed-large` |
-
-Start with `embeddinggemma`; do not select a model from generic benchmark claims
-alone. Build a small, authorised evaluation set of known same-transaction,
-same-business-process, and deliberately non-matching pairs. Compare precision
-among the top 10–20 results, false positives across similar account heads, and
-runtime/RAM on the actual firm workstation. Keep token-only matching enabled as
-an explainable fallback and record the selected model with every formal export.
-
-To test a different model without overwriting the default index:
-
-```sh
-ollama pull mxbai-embed-large
-python3 run.py embed-ledger --db demo/audit.db --model mxbai-embed-large
-python3 run.py similar --db demo/audit.db --model mxbai-embed-large --query "manual year-end tax provision"
-```
-
-## Semantic Risk Engine v1 (experimental)
-
-The complete implementation roadmap is in `docs/SEMANTIC_ENGINE.md`. This opt-in laboratory
-adds narration-only vectors (to avoid account-label leakage), account/vendor/
-preparer/entity profiles, deterministic process clusters, historical novelty,
-vendor shift, account mismatch and peer/cluster outlier cues. It never makes
-an audit conclusion, downloads a model or calls an LLM.
-
-```sh
-python3 run.py semantic-profile --db audit.db --actor engagement-owner
-python3 run.py semantic-investigate --db audit.db --run 1 --ledger-id 42
-python3 run.py analyze --db audit.db --actor engagement-owner --semantic-run 1
-python3 run.py semantic-evaluate --db audit.db --run 1 \
-  --labels examples/semantic/labels.csv --actor engagement-owner
-```
-
-A follow-up fix ensures entries with no semantic cues still retain their
-signal-snapshot evidence (linked analysis results, not "not evaluated").
-The `analysis_signal_results` table stores `components_json` per
-(run_id, ledger_id) for every entry in a semantic-linked analysis run;
-investigation resolves components as snapshot → legacy exception
-fallback → unavailable, never labelling missing evidence as normal.
-
-Use evaluation labels matching **your database**, not the example IDs on a
-real ledger. The self-contained synthetic demonstration and label format are
-in `examples/semantic/README.md`. `semantic-profile` accepts `--model`,
-`--batch-size`, and `--config` (a JSON file with keys/defaults documented in
-`docs/SEMANTIC_ENGINE.md` and `semantic_risk.DEFAULTS`). A local Ollama service and installed
-model with a resolvable digest are required to build profiles; investigation
-and evaluation read stored evidence and work offline.
-
-Profile construction requires an acknowledged population and an analysis role.
-It stores immutable run vectors, entry/peer snapshots, hashes, model digest,
-registry metadata, effective thresholds, coverage and resource measurements.
-It does not register or validate models automatically. Historical means
-strictly earlier calendar months in this engagement; account/vendor/preparer
-comparisons stay within entity. Missing narration/history/identities and fewer
-than five peers yield unavailable metrics, not a normal result. Cluster names
-are numeric and token-class hints are not authoritative process labels.
-
-Ordinary `analyze` is unchanged. Explicit `--semantic-run` adds **one 20-point
-contribution** if any semantic cue exists (not 20 per correlated cue), preserving
-deterministic evidence and the 100-point cap. Stale or incomplete profiles
-cannot be merged. Workpaper manifests include the linked run provenance.
-
-The review page adds semantic run selection, coverage, and an investigation
-view with peer examples, alternative accounts, related populations, metrics,
-thresholds, source links by ID and suggested evidence. Read-only endpoints:
-`/api/semantic-profile?run=1` and
-`/api/semantic-investigation?run=1&ledger_id=42`.
-`/api/exceptions?run=1` filters the analytical queue by analysis run, not semantic
-run. Omitting the filter preserves the existing all-runs response.
-
-**Known ceilings:** nearest examples use at most 64 deterministically selected
-candidates per comparison, displayed lists are capped, and spherical k-means
-trains on at most 512 vectors for 10 iterations. These are approximations,
-not an indexed nearest-neighbour service. Exact evaluation scans the stored
-population for each labelled query. Profile vectors/evidence are duplicated
-per run for reproducibility, so storage grows with run count. Memory figures
-cover Python allocations, not Ollama/native RAM. Thresholds and real embedding
-quality remain unvalidated; fixed-vector tests only verify mechanics. No
-large-ledger throughput is claimed. Chromium/Playwright rendering and interaction
-checks pass at 1440px desktop and 390px mobile widths, using a temporary
-synthetic engagement. Reproduce with `PYTHONPATH=src python3 -u tests/browser_fixture.py`,
-then `PLAYWRIGHT_MODULE=/path/to/playwright node tests/browser_review.cjs URL`,
-using the printed `BROWSER_URL`. The check captures screenshots under
-`/tmp/audit-browser-review`; it does not require installing project dependencies.
+An opt-in laboratory layer documented fully in [`docs/SEMANTIC_ENGINE.md`](docs/SEMANTIC_ENGINE.md). It uses narration-only vectors, account/vendor/preparer profiles, deterministic clusters, and peer-comparison cues — never a black-box verdict, never an external LLM call. It is designed for reproducible, explainable audit support, not automatic conclusions. Technical details (run mechanics, ceilings, model registry, evaluation framework) belong in that document.
 
 ## Supported GL fields
 
