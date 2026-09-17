@@ -327,7 +327,7 @@ python3 run.py similar --db demo/audit.db --model mxbai-embed-large --query "man
 
 ## Semantic Risk Engine v1 (experimental)
 
-The complete implementation roadmap is in `Plan.md`. This opt-in laboratory
+The complete implementation roadmap is in `docs/SEMANTIC_ENGINE.md`. This opt-in laboratory
 adds narration-only vectors (to avoid account-label leakage), account/vendor/
 preparer/entity profiles, deterministic process clusters, historical novelty,
 vendor shift, account mismatch and peer/cluster outlier cues. It never makes
@@ -352,7 +352,7 @@ Use evaluation labels matching **your database**, not the example IDs on a
 real ledger. The self-contained synthetic demonstration and label format are
 in `examples/semantic/README.md`. `semantic-profile` accepts `--model`,
 `--batch-size`, and `--config` (a JSON file with keys/defaults documented in
-`Plan.md` and `semantic_risk.DEFAULTS`). A local Ollama service and installed
+`docs/SEMANTIC_ENGINE.md` and `semantic_risk.DEFAULTS`). A local Ollama service and installed
 model with a resolvable digest are required to build profiles; investigation
 and evaluation read stored evidence and work offline.
 
@@ -486,7 +486,7 @@ approval, authorised data, or validated methodology before implementation.
   governance sign-off. The isolation scorer remains the only active model
   and is disableable per run.
 - **Semantic Risk Engine:** Phase 1 (A–E) is delivered and documented in
-  `Plan.md`. Future phases (investigation assistant, calibrated multi-detector
+  `docs/SEMANTIC_ENGINE.md`. Future phases (investigation assistant, calibrated multi-detector
   aggregation, governed feedback) are deferred and require authorised
   validation before promotion beyond laboratory use.
 

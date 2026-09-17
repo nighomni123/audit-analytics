@@ -328,3 +328,19 @@ Every release must retain these checks:
   ceiling, not a validated fraud model. It can be disabled per run.
 - CSV is the current workpaper export. Formatted Excel/PDF output and audit
   suite integration are planned additions.
+
+---
+
+## 11. Verified current state (post-resume, as of cleanup)
+
+Extracted from the temporary session-continuation file (`RESUME.md`, now removed).
+
+- **Tests:** 25/25 pass (`tests/test_*.py`).
+- **Module map:** `cli.py` (entrypoint), `store.py` (SQLite + reconciliation, audit_log), `importer.py`, `analytics.py`, `semantic.py`, `semantic_risk.py`, `semantic_evaluation.py`, `reports.py`, `server.py` (`serve` on `127.0.0.1:8788`), `bank.py`, `sampling.py`, `connectors.py`, `model_registry.py`.
+- **CLI surface:** ~34 subcommands (full list in `README.md`); key ones: `init`, `import-gl`, `import-coa`, `acknowledge-population`, `analyze`, `semantic-profile`, `semantic-investigate`, `semantic-evaluate`, `export`, `report`, `serve`, `compare-runs`, `lock-reviews`, `reopen-reviews`.
+- **MVP delivered:** engagement/init; CSV + first-sheet XLSX import (evidence copy + SHA-256); acknowledge-before-analyze lock; deterministic analytics (repeated entry, round amount, weekend/period-end, rare account/preparer, 30-day reversal, MAD peer outliers, Benford indicator ≥100); optional isolation-style ranking (pop ≥ 256); local semantic search (`max(token, cosine)`); Semantic Risk Engine Phase 1A–1E (narration-only embeddings, k-means clustering, metrics, cues, investigation, offline evaluation, stale-population guard, zero-cue `analysis_signal_results`, review page); review workflow (dispositions, append-only `reviews` + `audit_log`, assignments, reproducible sampling, CSV + JSON manifest, HTML report); `serve` local server.
+- **Releases 1.1–1.4 delivered post-resume:** 1.1 (materiality wiring `above_overall`/`above_performance`/`below`, fiscal-calendar + taxonomy tagging, methodology/limitations report section); 1.2 (second-level approval for cleared high-severity, `lock-reviews`/`reopen-reviews`, reviewer/status filters, signed export manifest SHA-256); 2 (connector framework `BaseConnector`/`DemoCsvConnector`; real ERP adapters deferred — need firm auth + data dictionary); 3 (`bank.py`: `import-bank`, `reconcile-bank`; vendor/customer/PO graphs deferred); 4 (`model_registry.py` provenance/stamp; validated statistical models deferred — need labelled authorised data).
+- **Invariants preserved:** no outbound network for client data (only optional same-host Ollama); additive schema only (no destructive row/hash/note deletion); acknowledge-before-analyze safety control; append-only reviews; scores = cues, never findings/opinions; lexical similarity never suppressed (`max(token, cosine)`); `serve` binds `127.0.0.1` only until 1.2 governance.
+- **Remaining open product decisions (before 1.1+):** materiality exact wiring (sampling ranking vs. disclosed threshold); structured reconciliation form vs. current `--expected-*` + note; workpaper output format (CSV + HTML sufficient, or need XLSX/PDF); account taxonomy source/owner; next-scope choice (continue 1.1 local work vs. pause for firm methodology input). See §8 roadmap.
+
+(See `README.md` for CLI/reference; `docs/SEMANTIC_ENGINE.md` for Semantic Risk Engine technical design; `docs/ARCHITECTURE.md` for system structure; `docs/DEVELOPMENT.md` for agent/dev rules; `AGENTS.md` for agent rules.)
