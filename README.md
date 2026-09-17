@@ -31,6 +31,47 @@ reasons and evidence, ranked for a human — not a black-box verdict.
 (`off_hours` in the ground truth is undetectable by design: the schema stores
 posting dates, not timestamps.)
 
+## Visual walkthrough (synthetic demo)
+
+Every image below uses only the synthetic 400-row GL (`examples/demo-journal-entries.csv`) and `demo-ground-truth.csv`. No real client data appears.
+
+### 0. Download or clone the repo
+![Download / clone repo](docs/screenshots/00-download.png)
+Clone with `git clone` or download the ZIP; all commands below run from this folder.
+
+### 1. Initialise the synthetic engagement
+![Init demo DB](docs/screenshots/01-init.png)
+`python3 run.py init --db demo-engagement.db --client "Demo Textiles Ltd" --period 2025-01-01:2026-03-31 --owner reviewer`
+
+### 2. Import the synthetic GL (400 rows)
+![Import synthetic GL](docs/screenshots/02-import-gl.png)
+`python3 run.py import-gl --db demo-engagement.db --file examples/demo-journal-entries.csv --actor reviewer --expected-rows 400 --expected-debits 3496407.62 --expected-credits 0`
+Reconciliation shows `matches: true`; all 400 rows accepted.
+
+### 3. Acknowledge the population
+![Acknowledge population](docs/screenshots/03-ack.png)
+`python3 run.py acknowledge-population --db demo-engagement.db --reviewer reviewer --note "demo: synthetic 400-row GL, control totals match"`
+Analysis is blocked until this step is completed.
+
+### 4. Run analysis (148 scored exceptions)
+![Run analysis](docs/screenshots/04-analyze.png)
+`python3 run.py analyze --db demo-engagement.db --actor reviewer`
+The synthetic dataset produces 148 scored exceptions; 4 of 5 planted anomalies surface.
+
+### 5. Generate the HTML report
+![Generate report](docs/screenshots/05-report-html.png)
+`python3 run.py report --db demo-engagement.db --out docs/screenshots/demo-report.html --actor reviewer`
+Produces a readable engagement summary.
+
+### 6. Start the local review UI
+![Serve web UI (desktop)](docs/screenshots/05-serve-ui.png)  
+![Serve web UI (mobile 390px)](docs/screenshots/06-serve-ui-mobile.png)
+`python3 run.py serve --db demo-engagement.db` → open `http://127.0.0.1:8788`. The review page shows exception rankings, evidence links, and dispositions (`open`, `cleared`, `follow_up`, `selected_for_testing`).
+
+### 7. Exception detail view (UI)
+![Exception detail in UI](docs/screenshots/07-serve-exception-detail.png)
+Each exception carries evidence links, robust-account-peer outlier scores, and Benford checks — not a black-box verdict.
+
 Real ledgers with non-canonical headers? Pass a header-mapping profile like
 `examples/demo-mapping.json` (`--mapping examples/demo-mapping.json`) or save
 one with `save-mapping` for reuse across engagements.
