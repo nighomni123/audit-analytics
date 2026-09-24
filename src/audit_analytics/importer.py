@@ -192,6 +192,9 @@ def import_gl(
                 if not entry_id or not account:
                     raise ValueError("missing entry ID or account code")
                 posting = _date(r["posting_date"])
+                monetary_values = (r.get("amount"), r.get("debit"), r.get("credit"))
+                if not any(value is not None and str(value).strip() != "" for value in monetary_values):
+                    raise ValueError("monetary amount is required")
                 debit, credit = _number(r["debit"]), _number(r["credit"])
                 if not debit and not credit:
                     amount = _number(r["amount"])
