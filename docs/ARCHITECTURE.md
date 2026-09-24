@@ -65,6 +65,9 @@ CSV or bounded XLSX
 - High-severity clears require a distinct, active, authorized second reviewer and note.
 - Review-set lock/reopen transitions are immutable, reasoned, role-checked events; locked sets reject review and assignment changes.
 - Identical evidence is rejected by default; explicit re-imports record `supersedes_import_id`.
+- Empty monetary fields are rejected; explicit zero and signed negative `amount` values follow the documented signed-amount contract.
+- Missing account/preparer identity is not counted as a rare identity; it reduces applicability instead of creating a cue.
+- Exception severity is immutable after analysis insertion; a changed analytical state requires a new model run.
 - The browser-selected local user is a workflow label, not authentication. Network deployment remains unsupported until SSO/RBAC/TLS/CSRF/tenancy controls exist.
 
 ## Retrieval and model boundaries

@@ -326,6 +326,16 @@ Every release must retain these checks:
   ceiling, not a validated fraud model. It can be disabled per run.
 - CSV is the current workpaper export. Formatted Excel/PDF output and audit
   suite integration are planned additions.
+- The demo ground-truth fixture has six rows with different observability
+  statuses; `off_hours` is unobservable and `benford_vendor` is not a direct
+  per-entry detector. See `docs/GROUND_TRUTH.md` before quoting metrics.
+- Missing monetary fields are rejected; explicit zero and signed negative
+  `amount` values remain supported according to the documented import contract.
+- Missing preparer/account identity is reported as not applicable rather than
+  counted as a rare identity. Persisted exception severity is immutable after
+  analysis; a new analysis run is required to change it.
+- Reversal comparisons and dense similarity retrieval have measured local
+  complexity/memory ceilings; import success does not imply analysis safety.
 
 ---
 

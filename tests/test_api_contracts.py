@@ -106,6 +106,9 @@ class FastAPIContractTest(unittest.TestCase):
         reimport = self.upload(reimport=True)
         self.assertEqual(reimport.status_code, 200, reimport.text)
         self.assertNotEqual(first.json()["import_id"], reimport.json()["import_id"])
+        missing = self.client.get("/api/imports/999999/reconciliation")
+        self.assertEqual(missing.status_code, 404)
+        self.assertEqual(missing.json()["error"]["code"], "not_found")
 
     def test_analysis_review_lock_and_export_contract(self):
         run_id = self.seed_analysis()
