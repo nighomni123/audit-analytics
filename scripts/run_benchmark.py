@@ -816,7 +816,12 @@ def main() -> None:
     parser.add_argument("--skip-browser", action="store_true")
     parser.add_argument("--only-import", action="store_true")
     parser.add_argument("--only-adversarial", action="store_true")
+    parser.add_argument("--output-dir", default="benchmark-results")
     args = parser.parse_args()
+    global RESULTS
+    RESULTS = Path(args.output_dir)
+    if not RESULTS.is_absolute():
+        RESULTS = ROOT / RESULTS
     sizes = [int(value) for value in args.sizes.split(",") if value]
     pipeline_sizes = [int(value) for value in args.pipeline_sizes.split(",") if value]
     adversarial_sizes = [int(value) for value in args.adversarial_sizes.split(",") if value]
