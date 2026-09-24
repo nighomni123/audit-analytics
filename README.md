@@ -86,7 +86,7 @@ python3 run.py serve --db demo-engagement.db   # review UI on http://127.0.0.1:8
 What you should see: a complete end-to-end run with the synthetic dataset (400 rows, control totals match). The tool surfaces explainable risk cues — not fraud findings — for auditor review.
 
 ### Technical validation (synthetic ground-truth)
-The synthetic dataset raises 148 scored exceptions; 4 of 5 planted anomalies surface (`JE035497` rank 9 via `round_amount`, two benford-vendor entries rank 14/22 via `robust_account_peer_outlier`, one at 122), one is missed by design (`off_hours` is undetectable — schema stores posting dates, not timestamps). This is evidence of how the system behaves; not a claim about real ledgers.
+The synthetic ground-truth file contains six labelled rows. The current baseline directly detects the `round_amount` row, surfaces two `benford_vendor` rows through the `robust_account_peer_outlier` proxy, surfaces one additional `benford_vendor` row only through `rare_account_preparer_pair`, misses one `benford_vendor` row, and cannot observe `off_hours` because the schema stores posting dates rather than timestamps. These are fixture semantics and detector mappings, not a claim about real ledgers or audit effectiveness. See [`docs/GROUND_TRUTH.md`](docs/GROUND_TRUTH.md).
 
 ## See it in action (visual walkthrough)
 

@@ -88,6 +88,8 @@ CREATE TRIGGER IF NOT EXISTS reviews_sync_exception_status AFTER INSERT ON revie
 BEGIN
   UPDATE exceptions SET status=NEW.disposition WHERE id=NEW.exception_id;
 END;
+CREATE TRIGGER IF NOT EXISTS exceptions_severity_immutable BEFORE UPDATE OF severity ON exceptions
+BEGIN SELECT RAISE(ABORT,'exception severity is immutable; create a new analysis run'); END;
 CREATE TRIGGER IF NOT EXISTS exceptions_status_matches_review BEFORE UPDATE OF status ON exceptions
 WHEN NOT EXISTS (
   SELECT 1 FROM reviews WHERE exception_id=OLD.id AND disposition=NEW.status ORDER BY id DESC LIMIT 1
@@ -249,7 +251,7 @@ class Store:
 
     def reconciliation(self, import_id: int, tolerance=0.01):
         row = self.conn.execute("SELECT * FROM imports WHERE id=? AND kind='gl'", (import_id,)).fetchone()
-        if not row: raise ValueError("GL import not found")
+        if not row: raise LookupError("GL import not found")
         supplied = all(row[k] is not None for k in ("expected_rows", "expected_debits", "expected_credits"))
         matches = supplied and row["accepted_rows"] == row["expected_rows"] and abs(row["control_debits"] - row["expected_debits"]) <= tolerance and abs(row["control_credits"] - row["expected_credits"]) <= tolerance
         return {"import_id": import_id, "supplied": supplied, "matches": matches, "accepted_rows": row["accepted_rows"], "expected_rows": row["expected_rows"], "control_debits": row["control_debits"], "expected_debits": row["expected_debits"], "control_credits": row["control_credits"], "expected_credits": row["expected_credits"], "reconciled_at": row["reconciled_at"]}

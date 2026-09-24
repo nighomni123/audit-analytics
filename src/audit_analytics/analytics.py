@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from bisect import bisect_left, bisect_right
 import math
 import random
 import statistics
@@ -15,6 +16,7 @@ ISOLATION_VERSION = "isolation-style-random-cut-v1"
 ISOLATION_SEED = 7
 ISOLATION_TREES = 40
 ISOLATION_MIN_POPULATION = 256
+MAX_ANALYSIS_POPULATION = 100_000
 
 
 def _median_mad(values):
@@ -56,21 +58,94 @@ def _isolation_scores(entries, trees=ISOLATION_TREES, seed=ISOLATION_SEED):
     max_depth = max(depths) or 1
     return {entries[i]["id"]: round(1 - depths[i] / max_depth, 3) for i in range(len(entries))}
 
+class _RangeMin:
+    """Small immutable range-minimum index for original ledger-row order."""
+
+    def __init__(self, values):
+        size = 1
+        while size < len(values):
+            size *= 2
+        self.size = size
+        self.tree = [None] * (size * 2)
+        self.tree[size:size + len(values)] = values
+        for index in range(size - 1, 0, -1):
+            left, right = self.tree[index * 2], self.tree[index * 2 + 1]
+            self.tree[index] = left if right is None or (left is not None and left <= right) else right
+
+    def query(self, left, right):
+        result = None
+        left += self.size
+        right += self.size
+        while left < right:
+            if left & 1:
+                value = self.tree[left]
+                if value is not None and (result is None or value < result):
+                    result = value
+                left += 1
+            if right & 1:
+                right -= 1
+                value = self.tree[right]
+                if value is not None and (result is None or value < result):
+                    result = value
+            left //= 2
+            right //= 2
+        return result
+
+
+def _reversal_matches(entries):
+    """Return the legacy first-counterpart match using a date-window index.
+
+    The previous implementation scanned every row in an account/amount bucket
+    and selected the first eligible row in ledger order. This preserves that
+    policy while avoiding the quadratic scan.
+    """
+    grouped = defaultdict(list)
+    parsed = []
+    for index, entry in enumerate(entries):
+        posted = date.fromisoformat(entry["posting_date"])
+        parsed.append((posted, entry))
+        if entry["signed_amount"]:
+            grouped[(entry["account_code"], round(abs(entry["signed_amount"]), 2))].append((posted, index, entry))
+    matches = {}
+    for group in grouped.values():
+        by_sign = {1: [], -1: []}
+        for item in group:
+            by_sign[1 if item[2]["signed_amount"] > 0 else -1].append(item)
+        indexes = {}
+        for sign, items in by_sign.items():
+            items.sort(key=lambda item: (item[0], item[1]))
+            indexes[sign] = ([item[0] for item in items], _RangeMin([item[1] for item in items]))
+        for sign, items in by_sign.items():
+            opposite_dates, opposite_index = indexes[-sign]
+            for posted, _, entry in items:
+                left = bisect_left(opposite_dates, posted - timedelta(days=30))
+                right = bisect_right(opposite_dates, posted + timedelta(days=30))
+                candidate = opposite_index.query(left, right)
+                if candidate is not None:
+                    matches[entry["id"]] = entries[candidate]["id"]
+    return matches
+
+
 def _calculate_signals(entries, policy, period_end, fiscal_calendar, taxonomy, include_isolation):
     """Calculate deterministic evidence without reading or writing persistence."""
     reasons, evidence = defaultdict(list), defaultdict(dict)
     by_key = defaultdict(list)
     by_account = defaultdict(list)
     by_user_pair = Counter()
-    ref_key = defaultdict(list)
+    reversal_matches = _reversal_matches(entries)
     for entry in entries:
         amount = round(abs(entry["signed_amount"]), 2)
         by_account[entry["account_code"]].append(entry)
-        by_user_pair[(entry["account_code"], entry["preparer"] or "")] += 1
+        if entry["account_code"] and entry["preparer"]:
+            by_user_pair[(entry["account_code"], entry["preparer"])] += 1
         if entry["reference"]:
             by_key[(entry["account_code"], entry["reference"], amount)].append(entry)
         by_key[(entry["account_code"], entry["posting_date"], amount, entry["description"] or "")].append(entry)
-        ref_key[(entry["account_code"], amount)].append(entry)
+
+    peer_stats = {}
+    for account, account_entries in by_account.items():
+        values = [abs(item["signed_amount"]) for item in account_entries]
+        peer_stats[account] = (len(values), _median_mad(values))
     for group in by_key.values():
         if len(group) > 1:
             for entry in group:
@@ -94,24 +169,24 @@ def _calculate_signals(entries, policy, period_end, fiscal_calendar, taxonomy, i
             reasons[ledger_id].append("period_end_posting")
         if posted.weekday() >= 5:
             reasons[ledger_id].append("weekend_posting")
-        if by_user_pair[(entry["account_code"], entry["preparer"] or "")] <= 2:
+        if not entry["account_code"] or not entry["preparer"]:
+            evidence[ledger_id]["rare_account_preparer_pair_applicability"] = "not_applicable_missing_identity"
+        elif by_user_pair[(entry["account_code"], entry["preparer"])] <= 2:
             reasons[ledger_id].append("rare_account_preparer_pair")
-        if any(timedelta(0) <= posted - fiscal_date <= timedelta(days=window) for fiscal_date in fiscal_dates):
+        if any(timedelta(0) <= fiscal_date - posted <= timedelta(days=window) for fiscal_date in fiscal_dates):
             reasons[ledger_id].append("fiscal_period_end")
         if entry["account_code"] in taxonomy:
             evidence[ledger_id]["account_type"], evidence[ledger_id]["account_label"] = taxonomy[entry["account_code"]]
-        peer = [abs(peer_entry["signed_amount"]) for peer_entry in by_account[entry["account_code"]]]
-        if len(peer) >= 8:
-            median, mad = _median_mad(peer)
+        peer_count, (median, mad) = peer_stats[entry["account_code"]]
+        if peer_count >= 8:
             if mad and abs(amount - median) / (1.4826 * mad) >= float(policy.get("outlier_robust_z", 3.5)):
                 reasons[ledger_id].append("robust_account_peer_outlier")
                 evidence[ledger_id]["peer_median"] = round(median, 2)
                 evidence[ledger_id]["robust_z"] = round(abs(amount - median) / (1.4826 * mad), 2)
-        for other in ref_key[(entry["account_code"], round(amount, 2))]:
-            if other["id"] != ledger_id and other["signed_amount"] * entry["signed_amount"] < 0 and abs((date.fromisoformat(other["posting_date"]) - posted).days) <= 30:
-                reasons[ledger_id].append("possible_reversal_within_30_days")
-                evidence[ledger_id]["reversal_ledger_id"] = other["id"]
-                break
+        reversal_ledger_id = reversal_matches.get(ledger_id)
+        if reversal_ledger_id is not None:
+            reasons[ledger_id].append("possible_reversal_within_30_days")
+            evidence[ledger_id]["reversal_ledger_id"] = reversal_ledger_id
     benford = _benford(entries)
     if benford["applicable"] and benford["flag"]:
         for entry in entries:
@@ -122,13 +197,22 @@ def _calculate_signals(entries, policy, period_end, fiscal_calendar, taxonomy, i
         if score >= 0.72:
             reasons[entry["id"]].append("isolation_style_anomaly")
             evidence[entry["id"]]["isolation_score"] = score
-    return reasons, evidence, benford, isolation, by_account
+    return reasons, evidence, benford, isolation, by_account, peer_stats
+
+
+def _check_analysis_population(population_count: int):
+    if population_count > MAX_ANALYSIS_POPULATION:
+        raise ValueError(
+            f"analysis safety limit exceeded: {population_count} rows; import is retained, "
+            f"but analysis is limited to {MAX_ANALYSIS_POPULATION} rows on the measured local profile"
+        )
 
 
 def analyze(store: Store, actor="system", include_isolation=True, semantic_run_id=None):
     if not store.population_acknowledged(): raise ValueError("analysis blocked: acknowledge every GL import's accepted population and control totals first")
     entries = [dict(r) for r in store.conn.execute("SELECT * FROM ledger_entries ORDER BY id")]
     if not entries: raise ValueError("no GL entries imported")
+    _check_analysis_population(len(entries))
     policy = store.get_setting("analysis_policy", {"round_amount_threshold": 1000, "period_end_days": 3, "outlier_robust_z": 3.5})
     isolation_enabled = bool(include_isolation and len(entries) >= ISOLATION_MIN_POPULATION)
     cfg = {
@@ -145,6 +229,7 @@ def analyze(store: Store, actor="system", include_isolation=True, semantic_run_i
                 "validation_status": "experimental",
             },
         },
+        "analysis_safety_limit": MAX_ANALYSIS_POPULATION,
         "policy": policy,
         "materiality": store.get_setting("materiality", {}),
     }
@@ -163,7 +248,7 @@ def analyze(store: Store, actor="system", include_isolation=True, semantic_run_i
         taxonomy = {row["account_code"]: (row["account_type"], row["label"]) for row in store.conn.execute("SELECT account_code, account_type, label FROM account_taxonomy")}
     except Exception:
         taxonomy = {}
-    reasons, evidence, benford, isolation, by_account = _calculate_signals(
+    reasons, evidence, benford, isolation, by_account, peer_stats = _calculate_signals(
         entries,
         policy,
         date.fromisoformat(store.engagement()["period_end"]),
@@ -177,12 +262,14 @@ def analyze(store: Store, actor="system", include_isolation=True, semantic_run_i
         deterministic_score = min(100, 20 * len(deterministic_reasons) + (15 if evidence[e["id"]].get("robust_z", 0) >= 5 else 0) + (15 if iso >= .85 else 0))
         semantic_cues = json.loads(semantic[e["id"]]["cues_json"]) if semantic else []
         if semantic:
-            amount_mad = _median_mad([abs(x['signed_amount']) for x in by_account[e['account_code']]])[1] if len(by_account[e['account_code']]) >= 8 else 0
+            peer_count, (_, amount_mad) = peer_stats[e['account_code']]
+            if peer_count < 8:
+                amount_mad = 0
             signal_status = {
                 'amount': 'flagged' if set(deterministic_reasons) & {'round_amount','robust_account_peer_outlier'} else 'not flagged',
                 'robust_amount_peer': 'flagged' if 'robust_account_peer_outlier' in deterministic_reasons else 'not flagged' if amount_mad else 'not applicable',
                 'timing': 'flagged' if set(deterministic_reasons) & {'period_end_posting','weekend_posting','fiscal_period_end'} else 'not flagged',
-                'frequency': 'flagged' if 'rare_account_preparer_pair' in deterministic_reasons else 'not flagged',
+                'frequency': 'not applicable' if (not e['account_code'] or not e['preparer']) else 'flagged' if 'rare_account_preparer_pair' in deterministic_reasons else 'not flagged',
             }
             reasons[e["id"]].extend(semantic_cues)
             evidence[e["id"]]["semantic"] = {"run_id": semantic_run_id, "metrics": json.loads(semantic[e["id"]]["metrics_json"]), "cues": semantic_cues, "evidence": json.loads(semantic[e["id"]]["evidence_json"])}
