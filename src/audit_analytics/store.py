@@ -88,6 +88,8 @@ CREATE TRIGGER IF NOT EXISTS reviews_sync_exception_status AFTER INSERT ON revie
 BEGIN
   UPDATE exceptions SET status=NEW.disposition WHERE id=NEW.exception_id;
 END;
+CREATE TRIGGER IF NOT EXISTS exceptions_severity_immutable BEFORE UPDATE OF severity ON exceptions
+BEGIN SELECT RAISE(ABORT,'exception severity is immutable; create a new analysis run'); END;
 CREATE TRIGGER IF NOT EXISTS exceptions_status_matches_review BEFORE UPDATE OF status ON exceptions
 WHEN NOT EXISTS (
   SELECT 1 FROM reviews WHERE exception_id=OLD.id AND disposition=NEW.status ORDER BY id DESC LIMIT 1

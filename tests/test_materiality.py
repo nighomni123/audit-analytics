@@ -46,9 +46,8 @@ class MaterialityTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as d:
             store = self._seed(Path(d))
             run_id = analyze(store, "manager", include_isolation=False)
-            # Flatten to a pure random slice: no high-severity, risk-count 0.
-            store.conn.execute("UPDATE exceptions SET severity='low', risk_score=1")
-            store.conn.commit()
+            # The generated population has no high-severity rows; risk_count=0
+            # therefore exercises the seeded random/materiality slice.
             _, selected = create_sample(store, "s", "reviewer", run_id, risk_count=0, random_count=5, seed=3, random_min_amount=250000)
             included = {r["entry_id"] for r in store.conn.execute(
                 "SELECT l.entry_id FROM sample_items si JOIN ledger_entries l ON l.id=si.ledger_id")}
