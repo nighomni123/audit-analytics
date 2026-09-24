@@ -239,9 +239,7 @@ private VPC. Engagement data must remain within the firm-approved environment.
 - Add assignment, due date, reviewer filters, search, and reviewer sampling
   queues. **(Delivered, post-resume)** assignment/due-date existed; `/reviews`
   filters by reviewer/status; sampling queues exist.
-- Add signed export manifests listing source imports, file hashes, run IDs, and
-  reviewed exception counts. **(Delivered, post-resume)** `export` manifest now
-  carries SHA-256 of the workpaper + manifest (`workpaper_sha256`/`manifest_sha256`).
+- **Delivered, post-resume:** `export` produces a checksummed workpaper manifest with SHA-256 of the workpaper and a detached `.manifest.json.sha256` checksum. It is an integrity checksum, not a digital signature.
 
 ### Release 2 — controlled ERP connectors
 
@@ -333,14 +331,14 @@ Every release must retain these checks:
 
 ## 11. Verified current state (post-resume, as of cleanup)
 
-Extracted from the temporary session-continuation file (`RESUME.md`, now removed).
+The current verified state is established by the test suite and the canonical implementation, not by the removed conversation artifact.
 
-- **Tests:** 25/25 pass (`tests/test_*.py`).
-- **Module map:** `cli.py` (entrypoint), `store.py` (SQLite + reconciliation, audit_log), `importer.py`, `analytics.py`, `semantic.py`, `semantic_risk.py`, `semantic_evaluation.py`, `reports.py`, `server.py` (`serve` on `127.0.0.1:8788`), `bank.py`, `sampling.py`, `connectors.py`, `model_registry.py`.
-- **CLI surface:** ~34 subcommands (full list in `README.md`); key ones: `init`, `import-gl`, `import-coa`, `acknowledge-population`, `analyze`, `semantic-profile`, `semantic-investigate`, `semantic-evaluate`, `export`, `report`, `serve`, `compare-runs`, `lock-reviews`, `reopen-reviews`.
-- **MVP delivered:** engagement/init; CSV + first-sheet XLSX import (evidence copy + SHA-256); acknowledge-before-analyze lock; deterministic analytics (repeated entry, round amount, weekend/period-end, rare account/preparer, 30-day reversal, MAD peer outliers, Benford indicator ≥100); optional isolation-style ranking (pop ≥ 256); local semantic search (`max(token, cosine)`); Semantic Risk Engine Phase 1A–1E (narration-only embeddings, k-means clustering, metrics, cues, investigation, offline evaluation, stale-population guard, zero-cue `analysis_signal_results`, review page); review workflow (dispositions, append-only `reviews` + `audit_log`, assignments, reproducible sampling, CSV + JSON manifest, HTML report); `serve` local server.
-- **Releases 1.1–1.4 delivered post-resume:** 1.1 (materiality wiring `above_overall`/`above_performance`/`below`, fiscal-calendar + taxonomy tagging, methodology/limitations report section); 1.2 (second-level approval for cleared high-severity, `lock-reviews`/`reopen-reviews`, reviewer/status filters, signed export manifest SHA-256); 2 (connector framework `BaseConnector`/`DemoCsvConnector`; real ERP adapters deferred — need firm auth + data dictionary); 3 (`bank.py`: `import-bank`, `reconcile-bank`; vendor/customer/PO graphs deferred); 4 (`model_registry.py` provenance/stamp; validated statistical models deferred — need labelled authorised data).
-- **Invariants preserved:** no outbound network for client data (only optional same-host Ollama); additive schema only (no destructive row/hash/note deletion); acknowledge-before-analyze safety control; append-only reviews; scores = cues, never findings/opinions; lexical similarity never suppressed (`max(token, cosine)`); `serve` binds `127.0.0.1` only until 1.2 governance.
-- **Remaining open product decisions (before 1.1+):** materiality exact wiring (sampling ranking vs. disclosed threshold); structured reconciliation form vs. current `--expected-*` + note; workpaper output format (CSV + HTML sufficient, or need XLSX/PDF); account taxonomy source/owner; next-scope choice (continue 1.1 local work vs. pause for firm methodology input). See §8 roadmap.
+- **Tests:** the locked environment runs the complete Python suite; frontend typecheck/build and the real browser workflow are separate quality gates.
+- **Canonical web:** FastAPI (`api/app.py`) serves the package-owned React static build on loopback; the legacy stdlib server is deleted.
+- **Governance:** `workflow.py` is the shared review/acknowledgement/configuration boundary; SQLite triggers enforce append-only history and status consistency; lock/reopen events persist and block review mutation.
+- **Evidence:** GL/COA/bank imports enforce source ceilings, full SHA-256 duplicate rejection, explicit re-import lineage, and rollback cleanup.
+- **Analytics:** deterministic rules remain explainable; isolation-style ranking is versioned experimental metadata; semantic retrieval discloses bounded approximation and exact-search performance measurements.
+- **Exports:** workpapers include second-review evidence and a detached manifest checksum; artifacts are checksummed, not digitally signed.
+- **Delivery:** `uv.lock`, `package-lock.json`, GitHub Actions, dependency/license checks, repository policy, backup/restore coverage, and a local operations runbook are present.
 
-(See `README.md` for CLI/reference; `docs/SEMANTIC_ENGINE.md` for Semantic Risk Engine technical design; `docs/ARCHITECTURE.md` for system structure; `docs/DEVELOPMENT.md` for agent/dev rules; `AGENTS.md` for agent rules.)
+The remaining deliberate boundaries are network authentication/tenancy, formal model validation on authorised labelled populations, ANN retrieval beyond the measured 100k local target, and firm-specific workpaper formats. These are documented decisions, not implied production readiness.

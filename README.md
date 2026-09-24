@@ -145,12 +145,17 @@ client ledger; the only optional service is Ollama running on the same machine.
 
 ### 1. Check prerequisites and choose an engagement folder
 
-Python 3.10+ is sufficient for the core tool. No package installation is
-required. Use a firm-approved encrypted local folder or private VPC volume and
-keep one database per engagement:
+Python 3.10+ and Node 22 are supported. The Python web extra and development
+tools are installed from `uv.lock`; the React bundle is built from
+`package-lock.json`. Use a firm-approved encrypted local folder or private VPC
+volume and keep one database per engagement:
 
 ```sh
 cd audit-analytics
+uv sync --frozen --all-extras --group dev
+source .venv/bin/activate
+npm --prefix frontend ci
+npm --prefix frontend run build
 python3 run.py --help
 mkdir -p engagements/example-ltd-fy26
 ```
@@ -254,6 +259,9 @@ python3 run.py import-gl --db engagements/example-ltd-fy26/audit.db \
   --expected-rows 125430 \
   --expected-debits 987654321.50 \
   --expected-credits 987654321.50
+# If the exact SHA-256 already exists, choose an explicit version action:
+python3 run.py import-gl --db engagements/example-ltd-fy26/audit.db \
+  --actor audit-preparer --file received/example_gl.csv --reimport
 ```
 
 Read the JSON response and confirm accepted rows, rejected rows, calculated
@@ -326,15 +334,17 @@ an audit exception, or an audit opinion.
 
 ### 8. Review, assign, and disposition exceptions
 
-Start the local UI:
+Start the canonical local workbench (build the frontend once after checkout):
 
 ```sh
 python3 run.py serve --db engagements/example-ltd-fy26/audit.db
 ```
 
-Open `http://127.0.0.1:8788`. Enter the name of a configured reviewer when
-saving a disposition. The UI is intentionally bound to localhost. For a fully
-documented command-line workflow:
+Open `http://127.0.0.1:8788`. The React workbench uses the same workflow and
+review invariants as the CLI; select a configured local user when saving a
+disposition. The user selection is a local workflow label, not authentication.
+The service is intentionally bound to localhost. For a fully documented
+command-line workflow:
 
 ```sh
 python3 run.py assign --db engagements/example-ltd-fy26/audit.db \
@@ -373,11 +383,12 @@ python3 run.py report --db engagements/example-ltd-fy26/audit.db \
   --actor audit-reviewer --out engagements/example-ltd-fy26/exports/engagement-report.html
 ```
 
-`export` writes the review CSV and a companion JSON manifest listing source
-imports, hashes, run state, and limitations. `report` produces a readable HTML
-engagement summary. Archive the database, `evidence/` directory, exports, and
-firm-prescribed workpapers together using the firm’s approved retention and
-backup process.
+`export` writes the review CSV, a companion JSON manifest listing source
+imports, hashes, run state, second-review evidence, and limitations, plus a
+`<manifest>.sha256` checksum. `report` produces a readable HTML
+engagement summary. The manifest is checksummed, not digitally signed. Archive
+the database, `evidence/` directory, exports, and firm-prescribed workpapers
+together using the firm’s approved retention and backup process.
 
 ## Local AI (optional)
 
@@ -415,8 +426,8 @@ send client data off the engagement host.
 - `review --exception N --disposition cleared --note … --second-reviewer X
   --second-note …` — clearing a **high-severity** exception requires a second,
   distinct reviewer (governance control).
-- `lock-reviews` / `reopen-reviews` — record a completed-review-set milestone
-  additively (reopening never erases prior reasoning).
+- `lock-reviews` / `reopen-reviews` — append immutable, reasoned review-set
+  events; a locked set rejects review and assignment changes.
 - `import-connector --connector demo_csv --file …` — import via a connector
   adapter that produces the same canonical import plus a `connector_runs` manifest.
   The `demo_csv` adapter is shipped to prove the interface; SAP/Oracle/Tally/
@@ -426,8 +437,8 @@ send client data off the engagement host.
 - `register-model` / `validate-model` / `list-models` — governed model registry
   for provenance/approval metadata (actual statistical validation is deferred
   until labelled, authorised populations exist).
-- `export` — the workpaper manifest now includes SHA-256 of the workpaper and of
-  the manifest itself (`workpaper_sha256` / `manifest_sha256`).
+- `export` — writes a workpaper CSV, manifest, and detached SHA-256 checksum;
+  the checksum is integrity evidence, not a digital signature.
 
 ## Controls and limitations
 
@@ -458,9 +469,9 @@ approval, authorised data, or validated methodology before implementation.
   fiscal-calendar controls; workbook/PDF output; model-run comparison;
   formal methodology/limitations report.
 - **Release 1.2 — review governance:** local user roles (preparer,
-  reviewer, engagement manager, quality reviewer); second-level approval
-  for cleared high-severity exceptions; lock/reopen completed review sets;
-  signed export manifests with SHA-256 workpaper and manifest hashes.
+  reviewer, engagement manager, quality reviewer); second-level approval for
+  cleared high-severity exceptions; immutable lock/reopen events; checksummed
+  export manifests with SHA-256 workpaper and detached manifest hashes.
 - **Release 2 — controlled ERP connectors:** read-only adapters for SAP,
   Oracle, Tally, QuickBooks and approved systems, each producing a
   connector-run manifest (authorization identity, query/version,

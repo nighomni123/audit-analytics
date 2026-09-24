@@ -5,7 +5,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from audit_analytics.analytics import analyze
+from audit_analytics.analytics import ISOLATION_VERSION, _isolation_scores, analyze
 from audit_analytics.importer import import_gl
 from audit_analytics.store import Store
 
@@ -38,6 +38,23 @@ class TestAnalyticsFeatures(unittest.TestCase):
             self.assertTrue(on_date)
             self.assertTrue(any("fiscal_period_end" in json.loads(r["reasons_json"]) for r in on_date))
             self.assertTrue(any("account_type" in json.loads(r["evidence_json"]) for r in rows))
+            model_run = store.conn.execute("SELECT model_name,validation_status,configuration,limitation_note FROM model_runs WHERE id=?", (run,)).fetchone()
+            self.assertEqual(model_run["model_name"], "deterministic-rules-v1")
+            self.assertEqual(model_run["validation_status"], "rules-only")
+            configuration = json.loads(model_run["configuration"])
+            self.assertEqual(configuration["model_components"]["isolation_style"]["version"], ISOLATION_VERSION)
+            self.assertFalse(configuration["model_components"]["isolation_style"]["enabled"])
+
+    def test_isolation_style_scores_are_deterministic_and_bounded(self):
+        entries = [
+            {"id": index, "signed_amount": 100 + (index % 17) * 13, "account_code": str(index % 5), "preparer": f"u{index % 3}"}
+            for index in range(1, 257)
+        ]
+        first = _isolation_scores(entries)
+        second = _isolation_scores(entries)
+        self.assertEqual(first, second)
+        self.assertEqual(set(first), {entry["id"] for entry in entries})
+        self.assertTrue(all(0 <= score <= 1 for score in first.values()))
 
 
 if __name__ == "__main__":

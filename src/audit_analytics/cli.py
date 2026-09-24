@@ -4,7 +4,6 @@ import argparse
 import json
 from pathlib import Path
 
-from .analytics import analyze
 from .bank import import_bank, reconcile_bank
 from .connectors import run_connector
 from .importer import import_coa, import_gl, preview_gl
@@ -12,8 +11,17 @@ from .model_registry import list_models, register_model, validate_model
 from .reports import compare_runs, engagement_summary, export_workpaper, write_engagement_report
 from .sampling import create_sample
 from .semantic import embed_ledger, similar_transactions
-from .server import serve
 from .store import Store
+from .workflow import (
+    acknowledge_population,
+    assign_exception,
+    configure_engagement,
+    create_engagement,
+    lock_review_set,
+    record_review,
+    reopen_review_set,
+    run_analysis,
+)
 
 DEFAULT_ACTOR = "engagement-owner"
 
@@ -81,6 +89,7 @@ def main():
         command = sub.add_parser(name)
         command.add_argument("--db", required=True); command.add_argument("--file", required=True)
         command.add_argument("--actor", default=DEFAULT_ACTOR)
+        command.add_argument("--reimport", action="store_true", help="explicitly create a new version of identical evidence")
     gl = sub.choices["import-gl"]
     gl.add_argument("--mapping", help="JSON canonical-field to source-header mapping")
     gl.add_argument("--mapping-name")
@@ -159,9 +168,9 @@ def main():
 
     # ---- Release 1.2: review governance ----
     lock = sub.add_parser("lock-reviews", help="record a completed-review-set milestone (additive; reopen to change)")
-    lock.add_argument("--db", required=True); lock.add_argument("--actor", required=True)
+    lock.add_argument("--db", required=True); lock.add_argument("--actor", required=True); lock.add_argument("--reason", required=True)
     reopen = sub.add_parser("reopen-reviews", help="additively reopen a locked review set")
-    reopen.add_argument("--db", required=True); reopen.add_argument("--actor", required=True)
+    reopen.add_argument("--db", required=True); reopen.add_argument("--actor", required=True); reopen.add_argument("--reason", required=True)
 
     # ---- Release 2: connector adapters (demo only; real ERP deferred) ----
     conn = sub.add_parser("import-connector", help="import via a connector adapter (demo_csv; real ERP connectors deferred)")
@@ -171,6 +180,7 @@ def main():
     # ---- Release 3: bank statement evidence + reconciliation ----
     ibank = sub.add_parser("import-bank", help="import a bank statement as separate evidence type")
     ibank.add_argument("--db", required=True); ibank.add_argument("--actor", default=DEFAULT_ACTOR); ibank.add_argument("--file", required=True)
+    ibank.add_argument("--reimport", action="store_true", help="explicitly create a new version of identical evidence")
     rbank = sub.add_parser("reconcile-bank", help="reconcile bank statements to ledger entries")
     rbank.add_argument("--db", required=True); rbank.add_argument("--actor", default=DEFAULT_ACTOR)
     rbank.add_argument("--tolerance", type=float, default=1.0); rbank.add_argument("--days", type=int, default=3)
@@ -187,16 +197,22 @@ def main():
     val.add_argument("--performance", help="JSON object of performance metrics")
     lmod = sub.add_parser("list-models", help="list registered models"); lmod.add_argument("--db", required=True)
 
-    args = p.parse_args(); store = Store(args.db)
+    args = p.parse_args()
+    if args.cmd == "serve":
+        if not 1 <= args.port <= 65535:
+            p.error("port must be from 1 to 65535")
+        try:
+            import uvicorn
+            from .api.app import create_app
+        except ImportError as exc:
+            p.exit(2, f"error: web dependencies are missing; install audit-analytics[web]\n")
+        uvicorn.run(create_app(args.db), host="127.0.0.1", port=args.port)
+        return
+    store = Store(args.db)
     try:
         if args.cmd == "init":
-            start, end = args.period.split(":", 1)
-            store.conn.execute("INSERT INTO engagement VALUES(1,?,?,?,strftime('%s','now'))", (args.client, start, end))
-            store.add_user(args.owner, "manager", "system")
-            store.set_setting("analysis_policy", {"round_amount_threshold": 1000, "period_end_days": 3, "outlier_robust_z": 3.5}, args.owner)
-            store.set_setting("materiality", {}, args.owner)
-            store.log(args.owner, "init", "engagement", 1, {"client": args.client}); store.conn.commit()
-            print(f"created engagement for {args.client}; owner={args.owner}")
+            engagement = create_engagement(store, args.client, args.period, args.owner)
+            print(f"created engagement for {engagement['client']}; owner={args.owner}")
         elif args.cmd == "preview-gl":
             print(json.dumps(preview_gl(args.file, _mapping(args, store)), indent=2, default=str))
         elif args.cmd == "save-mapping":
@@ -207,33 +223,29 @@ def main():
             print(json.dumps([dict(r) for r in store.conn.execute("SELECT name,created_at,created_by FROM import_mappings ORDER BY name")], indent=2))
         elif args.cmd == "import-gl":
             _require(store, args.actor, ("preparer", "reviewer", "manager", "partner"))
-            iid, accepted, rejected, debits, credits = import_gl(store, args.file, args.actor, _mapping(args, store), args.expected_rows, args.expected_debits, args.expected_credits)
+            iid, accepted, rejected, debits, credits = import_gl(store, args.file, args.actor, _mapping(args, store), args.expected_rows, args.expected_debits, args.expected_credits, args.reimport)
             print(json.dumps({"import_id": iid, "accepted": accepted, "rejected": rejected, "debits": debits, "credits": credits, "reconciliation": store.reconciliation(iid)}, indent=2))
         elif args.cmd == "import-coa":
-            _require(store, args.actor, ("preparer", "reviewer", "manager", "partner")); print(f"COA import {import_coa(store, args.file, args.actor)} complete")
+            _require(store, args.actor, ("preparer", "reviewer", "manager", "partner")); print(f"COA import {import_coa(store, args.file, args.actor, args.reimport)} complete")
         elif args.cmd == "acknowledge-population":
-            _require(store, args.reviewer, ("reviewer", "manager", "partner", "quality_reviewer"))
-            pending = store.conn.execute("SELECT id FROM imports WHERE kind='gl' AND acknowledged_at IS NULL").fetchall()
-            if not pending: raise ValueError("no unacknowledged GL imports")
-            for row in pending:
-                rec = store.reconciliation(row["id"])
-                if not rec["matches"] and not args.override_reconciliation:
-                    raise ValueError(f"import {row['id']} has no matching supplied control totals; use --override-reconciliation only with a documented difference")
-                store.conn.execute("UPDATE imports SET reconciled_at=strftime('%s','now'),reconciled_by=?,reconciliation_note=?,acknowledged_at=strftime('%s','now'),acknowledged_by=?,acknowledgement_note=? WHERE id=?", (args.reviewer, args.note, args.reviewer, args.note, row["id"]))
-                store.log(args.reviewer, "acknowledge_population", "import", row["id"], {"reconciliation": rec, "override": args.override_reconciliation, "note": args.note})
-            store.conn.commit(); print(f"acknowledged {len(pending)} reconciled GL import(s)")
+            result = acknowledge_population(store, args.reviewer, args.note, args.override_reconciliation)
+            print(f"acknowledged {len(result['import_ids'])} reconciled GL import(s)")
         elif args.cmd == "configure":
-            _require(store, args.actor, ("manager", "partner")); policy = store.get_setting("analysis_policy", {}); materiality = store.get_setting("materiality", {})
-            for value, key in ((args.round_amount_threshold, "round_amount_threshold"), (args.period_end_days, "period_end_days"), (args.outlier_robust_z, "outlier_robust_z")):
-                if value is not None: policy[key] = value
-            if args.materiality is not None: materiality["overall"] = args.materiality
-            if args.performance_materiality is not None: materiality["performance"] = args.performance_materiality
-            store.set_setting("analysis_policy", policy, args.actor); store.set_setting("materiality", materiality, args.actor)
-            store.log(args.actor, "configure", "engagement", 1, {"analysis_policy": policy, "materiality": materiality}); store.conn.commit(); print(json.dumps({"analysis_policy": policy, "materiality": materiality}, indent=2))
+            result = configure_engagement(
+                store,
+                args.actor,
+                materiality=args.materiality,
+                performance_materiality=args.performance_materiality,
+                round_amount_threshold=args.round_amount_threshold,
+                period_end_days=args.period_end_days,
+                outlier_robust_z=args.outlier_robust_z,
+            )
+            print(json.dumps(result, indent=2))
         elif args.cmd == "add-user":
             _require(store, args.actor, ("manager", "partner")); store.add_user(args.username, args.role, args.actor); store.conn.commit(); print(f"user {args.username} is {args.role}")
         elif args.cmd == "analyze":
-            _require(store, args.actor, ("preparer", "reviewer", "manager", "partner")); print(f"analysis run {analyze(store, args.actor, not args.no_isolation, args.semantic_run)} complete")
+            result = run_analysis(store, args.actor, not args.no_isolation, args.semantic_run)
+            print(f"analysis run {result['run_id']} complete")
         elif args.cmd == "embed-ledger":
             _require(store, args.actor, ("preparer", "reviewer", "manager", "partner")); print(f"embedded {embed_ledger(store, args.model, args.batch_size, args.actor)} changed ledger entries locally")
         elif args.cmd == "semantic-profile":
@@ -251,25 +263,19 @@ def main():
         elif args.cmd == "similar":
             rows = similar_transactions(store, args.query, args.limit, args.model); print(json.dumps({"query": args.query, "count": len(rows), "results": rows}, indent=2))
         elif args.cmd == "review":
-            _require(store, args.reviewer, ("reviewer", "manager", "partner", "quality_reviewer"))
-            exc = store.conn.execute("SELECT severity FROM exceptions WHERE id=?", (args.exception,)).fetchone()
-            if not exc: raise ValueError("exception not found")
-            second_reviewer, second_note = None, None
-            # ponytail: second-level approval is a real governance control for
-            # high-severity clears; it adds a column, it never overwrites the
-            # first reviewer's reasoning (reviews remain append-only).
-            if args.disposition == "cleared" and exc["severity"] == "high":
-                if not args.second_reviewer or not args.second_note:
-                    raise ValueError("clearing a high-severity exception requires a second reviewer (--second-reviewer) and --second-note")
-                if args.second_reviewer == args.reviewer:
-                    raise ValueError("second reviewer must differ from the first reviewer")
-                second_reviewer, second_note = args.second_reviewer, args.second_note
-            review_id = store.conn.execute("INSERT INTO reviews(exception_id,reviewer,disposition,note,created_at,second_reviewer,second_note) VALUES(?,?,?,?,strftime('%s','now'),?,?)", (args.exception, args.reviewer, args.disposition, args.note, second_reviewer, second_note)).lastrowid
-            store.conn.execute("UPDATE exceptions SET status=? WHERE id=?", (args.disposition, args.exception)); store.log(args.reviewer, "review_exception", "exception", args.exception, {"review_id": review_id, "disposition": args.disposition, "second_reviewer": second_reviewer}); store.conn.commit(); print(f"recorded review {review_id}")
+            result = record_review(
+                store,
+                args.exception,
+                args.reviewer,
+                args.disposition,
+                args.note,
+                args.second_reviewer,
+                args.second_note,
+            )
+            print(f"recorded review {result['review_id']}")
         elif args.cmd == "assign":
-            _require(store, args.actor, ("manager", "partner")); store.require_role(args.assignee, {"preparer", "reviewer", "manager", "partner", "quality_reviewer"})
-            if not store.conn.execute("UPDATE exceptions SET assigned_to=?,due_date=? WHERE id=?", (args.assignee, args.due_date, args.exception)).rowcount: raise ValueError("exception not found")
-            store.log(args.actor, "assign_exception", "exception", args.exception, {"assignee": args.assignee, "due_date": args.due_date}); store.conn.commit(); print(f"assigned exception {args.exception} to {args.assignee}")
+            result = assign_exception(store, args.actor, args.exception, args.assignee, args.due_date)
+            print(f"assigned exception {result['exception_id']} to {result['assignee']}")
         elif args.cmd == "create-sample":
             _require(store, args.actor, ("reviewer", "manager", "partner", "quality_reviewer")); sample_id, count = create_sample(store, args.name, args.actor, args.run, args.risk_count, args.random_count, args.seed, args.random_min_amount); print(f"sample set {sample_id}: {count} entries")
         elif args.cmd == "export":
@@ -284,16 +290,18 @@ def main():
         elif args.cmd == "compare-runs":
             print(json.dumps(compare_runs(store, args.run_a, args.run_b), indent=2, default=str))
         elif args.cmd == "lock-reviews":
-            store.set_review_lock(args.actor); print("review set locked (milestone recorded; reopen to change)")
+            lock_review_set(store, args.actor, args.reason)
+            print("review set locked (immutable milestone recorded; reopen to change)")
         elif args.cmd == "reopen-reviews":
-            store.clear_review_lock(args.actor); print("review set reopened (additive record kept)")
+            reopen_review_set(store, args.actor, args.reason)
+            print("review set reopened (immutable event recorded)")
         elif args.cmd == "import-connector":
             _require(store, args.actor, ("preparer", "reviewer", "manager", "partner"))
             iid, manifest = run_connector(args.connector, store, args.file, args.actor)
             print(json.dumps({"import_id": iid, **manifest}, indent=2))
         elif args.cmd == "import-bank":
             _require(store, args.actor, ("preparer", "reviewer", "manager", "partner"))
-            iid, accepted, rejected = import_bank(store, args.file, args.actor)
+            iid, accepted, rejected = import_bank(store, args.file, args.actor, args.reimport)
             print(json.dumps({"import_id": iid, "accepted": accepted, "rejected": rejected}, indent=2))
         elif args.cmd == "reconcile-bank":
             _require(store, args.actor, ("preparer", "reviewer", "manager", "partner"))
@@ -310,7 +318,7 @@ def main():
             summary = engagement_summary(store); summary["review_locked"] = store.review_locked()
             print(json.dumps(summary, indent=2, default=str))
         else:
-            serve(args.db, args.port)
+            p.error(f"unknown command: {args.cmd}")
     except (ValueError, LookupError, OSError) as exc:
         p.exit(2, f"error: {exc}\n")
     finally:

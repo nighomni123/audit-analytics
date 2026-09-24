@@ -12,6 +12,8 @@ class TestModelRegistry(unittest.TestCase):
         self.tmp = tempfile.TemporaryDirectory()
         self.store = Store(str(Path(self.tmp.name) / "t.db"))
         self.store.conn.execute("INSERT INTO engagement VALUES(1,'Client','2025-04-01','2026-03-31',0)")
+        self.store.add_user("actor1", "manager", "system")
+        self.store.conn.commit()
 
     def tearDown(self):
         self.store.close()

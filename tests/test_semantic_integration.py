@@ -36,15 +36,12 @@ class SemanticImportTest(unittest.TestCase):
 
 class SemanticWorkflowTest(unittest.TestCase):
     def test_fixture_profile_aggregation_export_and_http(self):
-        import threading
-        import urllib.request
-        import urllib.error
-        from http.server import ThreadingHTTPServer
+        from fastapi.testclient import TestClient
+        from audit_analytics.api.app import create_app
         from audit_analytics.semantic_risk import semantic_profile, semantic_investigate
         from audit_analytics.semantic_evaluation import evaluate_semantic
         from audit_analytics.analytics import analyze
         from audit_analytics.reports import export_workpaper
-        from audit_analytics import server
         with tempfile.TemporaryDirectory() as d:
             root=Path(d); store=Store(str(root/'audit.db'))
             store.conn.execute("INSERT INTO engagement VALUES(1,'Fixture','2025-01-01','2025-12-31',0)")
@@ -92,40 +89,42 @@ class SemanticWorkflowTest(unittest.TestCase):
             self.assertEqual(evaluation['mismatch']['recall'],1.0)
             _,manifest,_=export_workpaper(store,str(root/'workpaper.csv'))
             self.assertTrue(json.loads(manifest.read_text())['semantic_runs'])
-            captured=[]
-            def make_server(address,handler):
-                http=ThreadingHTTPServer(('127.0.0.1',0),handler)
-                captured.append((http,http.serve_forever));http.serve_forever=lambda:None
-                return http
-            with patch.object(server,'ThreadingHTTPServer',side_effect=make_server):
-                server.serve(str(store.path),0)
-            http,serve=captured[0]; thread=threading.Thread(target=serve,daemon=True);thread.start()
-            base=f'http://127.0.0.1:{http.server_port}'
+            client = TestClient(create_app(store.path))
             try:
-                def get(path):
-                    with urllib.request.urlopen(base+path) as response:return json.load(response)
-                profile=get('/api/semantic-profile')
-                self.assertEqual(profile['run_id'],rid)
+                response = client.get('/api/semantic-profile')
+                self.assertEqual(response.status_code, 200, response.text)
+                profile = response.json()
+                self.assertEqual(profile['run_id'], rid)
                 for key in ('status','started_at','completed_at','population_count','population_hash','stale','configuration','provenance','summary','limitation_note','available_runs'):
-                    self.assertIn(key,profile)
-                self.assertEqual(profile['provenance']['digest'],'fixed-fixture')
-                investigation=get(f'/api/semantic-investigation?run={rid}&ledger_id={lid}')
-                self.assertEqual(investigation['entry']['entry_id'],'A1')
+                    self.assertIn(key, profile)
+                self.assertEqual(profile['provenance']['digest'], 'fixed-fixture')
+                response = client.get(f'/api/semantic-investigation?run={rid}&ledger_id={lid}')
+                self.assertEqual(response.status_code, 200, response.text)
+                investigation = response.json()
+                self.assertEqual(investigation['entry']['entry_id'], 'A1')
                 for key in ('run_id','ledger_id','stale','entry','cluster_id','metrics','cues','evidence','other_signals','provenance'):
-                    self.assertIn(key,investigation)
-                self.assertEqual(investigation['other_signals'][0]['components_source'],'analysis_snapshot')
+                    self.assertIn(key, investigation)
+                self.assertEqual(investigation['other_signals'][0]['components_source'], 'analysis_snapshot')
                 for key in ('normal_peers','alternative_matches','related_population','comparisons','suggested_evidence','limitations'):
-                    self.assertIn(key,investigation['evidence'])
-                self.assertTrue(all(x['run_id']==combined for x in get(f'/api/exceptions?run={combined}')['rows']))
-                for path,status in [('/api/semantic-profile?run=-1',400),('/api/semantic-profile?run=999',404),('/api/semantic-investigation?run=1&ledger_id=0',400),('/api/exceptions?run=no',400)]:
-                    with self.assertRaises(urllib.error.HTTPError) as exc:get(path)
-                    self.assertEqual(exc.exception.code,status)
-                store.conn.execute("UPDATE ledger_entries SET description='changed' WHERE id=?",(lid,));store.conn.commit()
-                self.assertTrue(get('/api/semantic-profile')['stale'])
-                with self.assertRaisesRegex(ValueError,'stale'):analyze(store,'owner',False,rid)
-                self.assertEqual(semantic_investigate(store,rid,lid)['entry']['description'],'Strategic advisory engagement')
+                    self.assertIn(key, investigation['evidence'])
+                queue = client.get(f'/api/exceptions?run={combined}').json()
+                self.assertTrue(all(item['run_id'] == combined for item in queue['rows']))
+                for path, status in (
+                    ('/api/semantic-profile?run=-1', 422),
+                    ('/api/semantic-profile?run=999', 404),
+                    ('/api/semantic-investigation?run=1&ledger_id=0', 422),
+                    ('/api/exceptions?run=no', 422),
+                ):
+                    self.assertEqual(client.get(path).status_code, status)
+                store.conn.execute("UPDATE ledger_entries SET description='changed' WHERE id=?", (lid,))
+                store.conn.commit()
+                self.assertTrue(client.get('/api/semantic-profile').json()['stale'])
+                with self.assertRaisesRegex(ValueError, 'stale'):
+                    analyze(store, 'owner', False, rid)
+                self.assertEqual(semantic_investigate(store, rid, lid)['entry']['description'], 'Strategic advisory engagement')
             finally:
-                http.shutdown();thread.join();http.server_close();store.close()
+                client.close()
+                store.close()
 
 
 if __name__ == '__main__':

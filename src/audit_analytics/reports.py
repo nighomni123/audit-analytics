@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import csv
 import hashlib
+import hmac
 import html
 import json
 import time
@@ -34,6 +35,8 @@ def engagement_summary(store: Store):
         "exceptions": {r[0]: r[1] for r in store.conn.execute("SELECT severity,COUNT(*) FROM exceptions GROUP BY severity")},
         "review_status": {r[0]: r[1] for r in store.conn.execute("SELECT status,COUNT(*) FROM exceptions GROUP BY status")},
         "sample_sets": [dict(r) for r in store.conn.execute("SELECT * FROM sample_sets ORDER BY id DESC")],
+        "review_set": store.review_set_state(),
+        "review_set_history": store.review_set_history(),
         "settings": {r[0]: json.loads(r[1]) for r in store.conn.execute("SELECT key,value_json FROM settings ORDER BY key")},
     }
 
@@ -44,7 +47,8 @@ def _workpaper_rows(store: Store):
     ) SELECT e.id exception_id,e.run_id,e.risk_score,e.severity,e.status,e.assigned_to,e.due_date,
         l.entry_id,l.posting_date,l.document_date,l.account_code,c.account_name,l.debit,l.credit,l.signed_amount,
         l.description,l.preparer,l.reference,l.entity,l.is_manual,l.import_id,l.source_row,l.source_hash,
-        e.reasons_json,e.evidence_json,lr.reviewer,lr.disposition,lr.note,lr.created_at review_at
+        e.reasons_json,e.evidence_json,lr.reviewer,lr.disposition,lr.note,lr.created_at review_at,
+        lr.second_reviewer,lr.second_note
         FROM exceptions e JOIN ledger_entries l ON l.id=e.ledger_id LEFT JOIN coa c ON c.account_code=l.account_code
         LEFT JOIN latest_review lr ON lr.exception_id=e.id AND lr.n=1 ORDER BY e.risk_score DESC,e.id""").fetchall()
 
@@ -52,21 +56,54 @@ def _workpaper_rows(store: Store):
 def export_workpaper(store: Store, out: str, actor="system"):
     destination = Path(out); destination.parent.mkdir(parents=True, exist_ok=True)
     rows = _workpaper_rows(store)
-    fields = ["exception_id","run_id","risk_score","severity","status","assigned_to","due_date","entry_id","posting_date","document_date","account_code","account_name","debit","credit","signed_amount","description","preparer","reference","entity","is_manual","import_id","source_row","source_hash","reasons_json","evidence_json","reviewer","disposition","note","review_at"]
+    fields = ["exception_id","run_id","risk_score","severity","status","assigned_to","due_date","entry_id","posting_date","document_date","account_code","account_name","debit","credit","signed_amount","description","preparer","reference","entity","is_manual","import_id","source_row","source_hash","reasons_json","evidence_json","reviewer","disposition","note","review_at","second_reviewer","second_note"]
     with destination.open("w", newline="", encoding="utf-8") as f:
         writer = csv.DictWriter(f, fieldnames=fields); writer.writeheader(); writer.writerows(dict(row) for row in rows)
-    manifest = {"created_at": time.time(), "workpaper": str(destination), "summary": engagement_summary(store), "source_imports": [{k:r[k] for k in ("id","original_name","sha256","evidence_path")} for r in store.conn.execute("SELECT id,original_name,sha256,evidence_path FROM imports")], "exception_count": len(rows), "limitation": "Risk cues support auditor judgement; they are not findings, fraud determinations, or audit conclusions."}
+    manifest = {
+        "created_at": time.time(),
+        "workpaper": destination.name,
+        "summary": engagement_summary(store),
+        "source_imports": [
+            {key: row[key] for key in ("id", "original_name", "sha256", "evidence_path", "supersedes_import_id")}
+            for row in store.conn.execute(
+                "SELECT id,original_name,sha256,evidence_path,supersedes_import_id FROM imports ORDER BY id"
+            )
+        ],
+        "exception_count": len(rows),
+        "limitation": "Risk cues support auditor judgement; they are not findings, fraud determinations, or audit conclusions.",
+    }
     manifest["semantic_runs"] = []
     for run in store.conn.execute("SELECT id,configuration FROM model_runs ORDER BY id"):
         semantic = json.loads(run["configuration"]).get("semantic")
-        if semantic: manifest["semantic_runs"].append({"analysis_run_id": run["id"], **semantic})
+        if semantic:
+            manifest["semantic_runs"].append({"analysis_run_id": run["id"], **semantic})
     manifest_path = destination.with_suffix(destination.suffix + ".manifest.json")
+    checksum_path = Path(str(manifest_path) + ".sha256")
     manifest["workpaper_sha256"] = hashlib.sha256(destination.read_bytes()).hexdigest()
-    manifest_path.write_text(json.dumps(manifest, indent=2, default=str), encoding="utf-8")
-    manifest["manifest_sha256"] = hashlib.sha256(manifest_path.read_bytes()).hexdigest()
-    manifest_path.write_text(json.dumps(manifest, indent=2, default=str), encoding="utf-8")
-    store.log(actor, "export_workpaper", "export", str(destination), {"manifest": str(manifest_path), "rows": len(rows)})
-    store.conn.commit(); return destination, manifest_path, len(rows)
+    manifest["integrity"] = {"algorithm": "SHA-256", "manifest_checksum_file": checksum_path.name}
+    manifest_path.write_text(json.dumps(manifest, indent=2, default=str) + "\n", encoding="utf-8")
+    manifest_digest = hashlib.sha256(manifest_path.read_bytes()).hexdigest()
+    checksum_path.write_text(f"{manifest_digest}  {manifest_path.name}\n", encoding="utf-8")
+    store.log(
+        actor,
+        "export_workpaper",
+        "export",
+        str(destination),
+        {"manifest": str(manifest_path), "manifest_digest": manifest_digest, "rows": len(rows)},
+    )
+    store.conn.commit()
+    return destination, manifest_path, len(rows)
+
+
+def verify_manifest(manifest_path: str | Path) -> bool:
+    """Verify a manifest against its detached SHA-256 sidecar."""
+    manifest_path = Path(manifest_path)
+    checksum_path = Path(str(manifest_path) + ".sha256")
+    if not manifest_path.is_file() or not checksum_path.is_file():
+        raise FileNotFoundError("manifest or detached checksum is missing")
+    expected = checksum_path.read_text(encoding="utf-8").split()[0]
+    actual = hashlib.sha256(manifest_path.read_bytes()).hexdigest()
+    return hmac.compare_digest(expected, actual)
 
 
 def write_engagement_report(store: Store, out: str, actor="system"):

@@ -23,3 +23,19 @@ data/
 # Virtual environments / tooling
 .venv/
 node_modules/
+.uv-cache/
+.npm-cache/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+frontend/dist/
+frontend/test-results/
+frontend/playwright-report/
+frontend/blob-report/
+.playwright-browsers/
+*.log
+build/
+dist/
+*.egg-info/

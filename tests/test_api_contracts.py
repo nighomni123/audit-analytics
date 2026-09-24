@@ -1,39 +1,171 @@
-"""FastAPI endpoint contract tests (replaces server endpoint checks for adapter)."""
-import unittest, sys, os, json
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
+import csv
+import io
+import tempfile
+import unittest
+import zipfile
+from pathlib import Path
 
 from fastapi.testclient import TestClient
-from audit_analytics.api.app import app, db_path
 
-class TestFastAPIContracts(unittest.TestCase):
+from audit_analytics.api.app import create_app
+from audit_analytics.store import Store
+
+
+class FastAPIContractTest(unittest.TestCase):
     def setUp(self):
-        self.client = TestClient(app)
+        self.directory = tempfile.TemporaryDirectory()
+        self.root = Path(self.directory.name)
+        self.db = self.root / "audit.db"
+        self.client = TestClient(create_app(self.db))
+        response = self.client.post(
+            "/api/engagement",
+            json={"client": "API Client", "period": "2025-04-01:2026-03-31", "owner": "manager"},
+        )
+        self.assertEqual(response.status_code, 200, response.text)
+        store = Store(str(self.db))
+        store.add_user("reviewer", "reviewer", "manager")
+        store.add_user("second", "quality_reviewer", "manager")
+        store.conn.commit()
+        store.close()
+        source = self.root / "gl.csv"
+        with source.open("w", newline="", encoding="utf-8") as stream:
+            writer = csv.DictWriter(stream, fieldnames=["entry_id", "posting_date", "account_code", "amount", "description"])
+            writer.writeheader()
+            for index in range(12):
+                writer.writerow(
+                    {
+                        "entry_id": f"JE{index}",
+                        "posting_date": "2026-03-31" if index == 11 else "2026-02-01",
+                        "account_code": "6000",
+                        "amount": 1000 if index == 11 else 100 + index,
+                        "description": "year-end accrual" if index == 11 else "routine repair",
+                    }
+                )
+        self.source = source
 
-    def test_status_contract(self):
-        r = self.client.get("/api/status")
-        self.assertEqual(r.status_code, 200)
-        self.assertIn("entries", r.json())
+    def tearDown(self):
+        self.client.close()
+        self.directory.cleanup()
 
-    def test_exceptions_contract_empty_run(self):
-        r = self.client.get("/api/exceptions")
-        self.assertEqual(r.status_code, 200)
-        data = r.json()
-        self.assertIn("count", data)
-        self.assertIn("rows", data)
+    def upload(self, *, reimport=False):
+        data = {
+            "actor": "manager",
+            "expected_rows": "12",
+            "expected_debits": str(sum([100 + i for i in range(11)] + [1000])),
+            "expected_credits": "0",
+            "reimport": str(reimport).lower(),
+        }
+        return self.client.post(
+            "/api/imports/gl",
+            data=data,
+            files={"file": (self.source.name, self.source.read_bytes(), "text/csv")},
+        )
 
-    def test_users_contract(self):
-        r = self.client.get("/api/users")
-        self.assertEqual(r.status_code, 200)
-        self.assertIsInstance(r.json(), list)
+    def seed_analysis(self):
+        imported = self.upload()
+        self.assertEqual(imported.status_code, 200, imported.text)
+        acknowledged = self.client.post(
+            "/api/imports/acknowledge",
+            json={"reviewer": "reviewer", "note": "agreed to source control report", "override_reconciliation": False},
+        )
+        self.assertEqual(acknowledged.status_code, 200, acknowledged.text)
+        configured = self.client.put(
+            "/api/config",
+            json={"actor": "manager", "materiality": 500, "performance_materiality": 350, "period_end_days": 3},
+        )
+        self.assertEqual(configured.status_code, 200, configured.text)
+        analyzed = self.client.post("/api/analysis-runs", json={"actor": "reviewer", "include_isolation": False})
+        self.assertEqual(analyzed.status_code, 200, analyzed.text)
+        return analyzed.json()["run_id"]
 
-    def test_similar_contract(self):
-        r = self.client.get("/api/similar?q=test")
-        self.assertEqual(r.status_code, 200)
-        self.assertIn("results", r.json())
+    def test_health_static_and_same_origin_contract(self):
+        health = self.client.get("/api/health")
+        self.assertEqual(health.status_code, 200)
+        self.assertEqual(health.json()["status"], "ok")
+        self.assertRegex(health.headers["x-request-id"], r"^[0-9a-f]{16}$")
+        root = self.client.get("/")
+        self.assertEqual(root.status_code, 200)
+        self.assertIn("text/html", root.headers["content-type"])
+        self.assertNotIn("access-control-allow-origin", root.headers)
+        self.assertEqual(root.headers["x-frame-options"], "DENY")
+        self.assertEqual(self.client.get("/api/status").status_code, 200)
 
-    def test_review_requires_note_and_disposition(self):
-        r = self.client.post("/api/review", json={"id":1,"reviewer":"admin","disposition":"open","note":""})
-        self.assertIn(r.status_code, (400, 422))
+    def test_preview_import_duplicate_and_reconciliation_contract(self):
+        preview = self.client.post(
+            "/api/imports/preview",
+            files={"file": (self.source.name, self.source.read_bytes(), "text/csv")},
+        )
+        self.assertEqual(preview.status_code, 200, preview.text)
+        self.assertEqual(preview.json()["missing_required"], [])
+        first = self.upload()
+        self.assertEqual(first.status_code, 200, first.text)
+        self.assertTrue(first.json()["reconciliation"]["matches"])
+        duplicate = self.upload()
+        self.assertEqual(duplicate.status_code, 409)
+        self.assertEqual(duplicate.json()["error"]["code"], "duplicate_import")
+        reimport = self.upload(reimport=True)
+        self.assertEqual(reimport.status_code, 200, reimport.text)
+        self.assertNotEqual(first.json()["import_id"], reimport.json()["import_id"])
+
+    def test_analysis_review_lock_and_export_contract(self):
+        run_id = self.seed_analysis()
+        queue = self.client.get("/api/exceptions", params={"run": run_id, "severity": "high", "limit": 5})
+        self.assertEqual(queue.status_code, 200, queue.text)
+        self.assertGreater(queue.json()["total"], 0)
+        exception_id = queue.json()["rows"][0]["id"]
+        detail = self.client.get(f"/api/exceptions/{exception_id}")
+        self.assertEqual(detail.status_code, 200, detail.text)
+        self.assertTrue(detail.json()["entry_id"])
+
+        missing_second = self.client.post(
+            "/api/review",
+            json={"id": exception_id, "reviewer": "reviewer", "disposition": "cleared", "note": "support checked"},
+        )
+        self.assertIn(missing_second.status_code, (400, 409))
+        reviewed = self.client.post(
+            "/api/review",
+            json={
+                "id": exception_id,
+                "reviewer": "reviewer",
+                "disposition": "cleared",
+                "note": "support checked",
+                "second_reviewer": "second",
+                "second_note": "independent review",
+            },
+        )
+        self.assertEqual(reviewed.status_code, 200, reviewed.text)
+        self.assertEqual(self.client.get(f"/api/exceptions/{exception_id}").json()["status"], "cleared")
+
+        locked = self.client.post(
+            "/api/review-set/lock", json={"actor": "manager", "reason": "review set complete"}
+        )
+        self.assertEqual(locked.status_code, 200, locked.text)
+        blocked = self.client.post(
+            "/api/review",
+            json={"id": exception_id, "reviewer": "reviewer", "disposition": "follow_up", "note": "late change"},
+        )
+        self.assertEqual(blocked.status_code, 409)
+        self.assertEqual(blocked.json()["error"]["code"], "review_locked")
+        reopened = self.client.post(
+            "/api/review-set/reopen", json={"actor": "manager", "reason": "new evidence received"}
+        )
+        self.assertEqual(reopened.status_code, 200, reopened.text)
+
+        package = self.client.post("/api/exports/package", json={"actor": "reviewer"})
+        self.assertEqual(package.status_code, 200, package.text)
+        self.assertEqual(package.headers["content-type"], "application/zip")
+        with zipfile.ZipFile(io.BytesIO(package.content)) as archive:
+            names = set(archive.namelist())
+            self.assertIn("workpaper.csv", names)
+            self.assertIn("workpaper.csv.manifest.json", names)
+            self.assertIn("workpaper.csv.manifest.json.sha256", names)
+            self.assertIn("engagement-report.html", names)
+
+    def test_validation_errors_use_one_json_shape(self):
+        response = self.client.post("/api/review", json={"id": 0, "reviewer": "", "disposition": "unknown", "note": ""})
+        self.assertEqual(response.status_code, 422)
+        self.assertEqual(response.json()["error"]["code"], "validation_error")
+
 
 if __name__ == "__main__":
     unittest.main()

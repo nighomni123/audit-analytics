@@ -11,6 +11,17 @@ from xml.etree import ElementTree as ET
 
 from .store import Store
 
+MAX_SOURCE_BYTES = 250 * 1024 * 1024
+MAX_XLSX_UNCOMPRESSED_BYTES = 1024 * 1024 * 1024
+
+
+class DuplicateImportError(ValueError):
+    def __init__(self, kind: str, existing_import_id: int):
+        super().__init__(f"identical {kind} source already imported as {existing_import_id}")
+        self.kind = kind
+        self.existing_import_id = existing_import_id
+
+
 ALIASES = {
     "entry_id": ("entry_id", "journal_entry_id", "voucher_no", "voucher_number", "transaction_id", "document_id"),
     "posting_date": ("posting_date", "date", "entry_date", "postingdate"),
@@ -41,6 +52,48 @@ def _date(value):
         try: return datetime.strptime(raw, fmt).date().isoformat()
         except ValueError: pass
     raise ValueError("invalid posting date")
+
+def _validate_source(source: Path):
+    if not source.is_file():
+        raise ValueError(f"source file not found: {source}")
+    if source.stat().st_size > MAX_SOURCE_BYTES:
+        raise ValueError(f"source file exceeds the {MAX_SOURCE_BYTES}-byte import limit")
+    if source.suffix.lower() == ".xlsx":
+        with zipfile.ZipFile(source) as book:
+            expanded = sum(max(0, item.file_size) for item in book.infolist())
+        if expanded > MAX_XLSX_UNCOMPRESSED_BYTES:
+            raise ValueError(f"XLSX expands beyond the {MAX_XLSX_UNCOMPRESSED_BYTES}-byte safety limit")
+
+
+def _sha256(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as stream:
+        for chunk in iter(lambda: stream.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def _evidence_target(store: Store, source: Path, kind: str, reimport: bool):
+    digest = _sha256(source)
+    existing = store.existing_import(kind, digest)
+    if existing and not reimport:
+        raise DuplicateImportError(kind, existing["id"])
+    safe_name = Path(source.name).name
+    if not safe_name:
+        raise ValueError("source filename is required")
+    target = store.path.parent / "evidence" / f"{digest}_{safe_name}"
+    created = False
+    target.parent.mkdir(exist_ok=True)
+    if not target.exists():
+        shutil.copy2(source, target)
+        created = True
+    return digest, target, created, existing["id"] if existing else None
+
+
+def _cleanup_evidence(target: Path, created: bool):
+    if created:
+        target.unlink(missing_ok=True)
+
 
 def _rows(path: Path):
     if path.suffix.lower() == ".csv":
@@ -88,6 +141,7 @@ def _canonical(row, mapping=None):
 
 def preview_gl(filename: str, mapping=None, sample_size=10):
     source = Path(filename)
+    _validate_source(source)
     iterator = _rows(source)
     sample = []
     for _ in range(sample_size):
@@ -103,45 +157,113 @@ def preview_gl(filename: str, mapping=None, sample_size=10):
     return {"file": source.name, "headers": headers, "mapping": inferred, "missing_required": missing, "sample_rows": sample}
 
 
-def import_gl(store: Store, filename: str, actor="system", mapping=None, expected_rows=None, expected_debits=None, expected_credits=None):
+def import_gl(
+    store: Store,
+    filename: str,
+    actor="system",
+    mapping=None,
+    expected_rows=None,
+    expected_debits=None,
+    expected_credits=None,
+    reimport: bool = False,
+    commit: bool = True,
+):
     source = Path(filename)
-    if not source.is_file(): raise ValueError(f"source file not found: {source}")
-    evidence = store.path.parent / "evidence"; evidence.mkdir(exist_ok=True)
-    digest = hashlib.sha256(source.read_bytes()).hexdigest()
-    target = evidence / f"{digest[:12]}_{source.name}"
-    if not target.exists(): shutil.copy2(source, target)
-    cur = store.conn.execute("""INSERT INTO imports(kind,original_name,evidence_path,sha256,imported_at,accepted_rows,rejected_rows,expected_rows,expected_debits,expected_credits)
-        VALUES('gl',?,?,?,?,?,?,?,?,?)""", (source.name, str(target), digest, __import__('time').time(), 0, 0, expected_rows, expected_debits, expected_credits))
-    import_id = cur.lastrowid; accepted = rejected = 0; debits = credits = 0.0
-    for line, raw in enumerate(_rows(source), 2):
-        try:
-            r = _canonical(raw, mapping); entry_id = str(r["entry_id"] or "").strip(); account = str(r["account_code"] or "").strip()
-            if not entry_id or not account: raise ValueError("missing entry ID or account code")
-            posting = _date(r["posting_date"])
-            debit, credit = _number(r["debit"]), _number(r["credit"])
-            if not debit and not credit:
-                amount = _number(r["amount"])
-                debit, credit = (amount, 0.0) if amount >= 0 else (0.0, -amount)
-            if debit < 0 or credit < 0 or (debit and credit): raise ValueError("invalid debit/credit values")
-            manual = str(r["is_manual"] or "").lower() in ("1", "true", "yes", "manual")
-            raw_json = json.dumps(raw, default=str, sort_keys=True); row_hash = hashlib.sha256(raw_json.encode()).hexdigest()
-            store.conn.execute("""INSERT INTO ledger_entries(import_id,entry_id,posting_date,document_date,account_code,debit,credit,signed_amount,description,preparer,reference,entity,vendor,is_manual,source_row,source_hash,raw_json)
-                VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""", (import_id, entry_id, posting, _date(r["document_date"]) if r["document_date"] else None, account, debit, credit, debit-credit, r["description"], r["preparer"], r["reference"], r["entity"], (r["vendor"] or None), int(manual), line, row_hash, raw_json))
-            accepted += 1; debits += debit; credits += credit
-        except (ValueError, TypeError) as e:
-            rejected += 1; store.conn.execute("INSERT INTO rejected_rows(import_id,source_row,reason,raw_json) VALUES(?,?,?,?)", (import_id, line, str(e), json.dumps(raw, default=str)))
-    store.conn.execute("UPDATE imports SET accepted_rows=?,rejected_rows=?,control_debits=?,control_credits=? WHERE id=?", (accepted, rejected, debits, credits, import_id))
-    store.log(actor, "import_gl", "import", import_id, {"accepted": accepted, "rejected": rejected, "sha256": digest, "mapping": mapping or {}, "expected_rows": expected_rows, "expected_debits": expected_debits, "expected_credits": expected_credits})
-    store.conn.commit(); return import_id, accepted, rejected, debits, credits
+    _validate_source(source)
+    store.conn.commit()  # preserve the historical import boundary for pending engagement setup
+    store.conn.execute("BEGIN IMMEDIATE")
+    created = False
+    try:
+        digest, target, created, supersedes = _evidence_target(store, source, "gl", reimport)
+        cur = store.conn.execute(
+            """INSERT INTO imports(kind,original_name,evidence_path,sha256,imported_at,accepted_rows,rejected_rows,
+               expected_rows,expected_debits,expected_credits,supersedes_import_id)
+               VALUES('gl',?,?,?,?,?,?,?,?,?,?)""",
+            (source.name, str(target), digest, __import__('time').time(), 0, 0, expected_rows, expected_debits, expected_credits, supersedes),
+        )
+        import_id = cur.lastrowid
+        accepted = rejected = 0
+        debits = credits = 0.0
+        for line, raw in enumerate(_rows(source), 2):
+            try:
+                r = _canonical(raw, mapping)
+                entry_id = str(r["entry_id"] or "").strip()
+                account = str(r["account_code"] or "").strip()
+                if not entry_id or not account:
+                    raise ValueError("missing entry ID or account code")
+                posting = _date(r["posting_date"])
+                debit, credit = _number(r["debit"]), _number(r["credit"])
+                if not debit and not credit:
+                    amount = _number(r["amount"])
+                    debit, credit = (amount, 0.0) if amount >= 0 else (0.0, -amount)
+                if debit < 0 or credit < 0 or (debit and credit):
+                    raise ValueError("invalid debit/credit values")
+                manual = str(r["is_manual"] or "").lower() in ("1", "true", "yes", "manual")
+                raw_json = json.dumps(raw, default=str, sort_keys=True)
+                row_hash = hashlib.sha256(raw_json.encode()).hexdigest()
+                store.conn.execute(
+                    """INSERT INTO ledger_entries(import_id,entry_id,posting_date,document_date,account_code,debit,credit,signed_amount,description,preparer,reference,entity,vendor,is_manual,source_row,source_hash,raw_json)
+                       VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+                    (import_id, entry_id, posting, _date(r["document_date"]) if r["document_date"] else None, account, debit, credit, debit-credit, r["description"], r["preparer"], r["reference"], r["entity"], (r["vendor"] or None), int(manual), line, row_hash, raw_json),
+                )
+                accepted += 1
+                debits += debit
+                credits += credit
+            except (ValueError, TypeError) as exc:
+                rejected += 1
+                store.conn.execute(
+                    "INSERT INTO rejected_rows(import_id,source_row,reason,raw_json) VALUES(?,?,?,?)",
+                    (import_id, line, str(exc), json.dumps(raw, default=str)),
+                )
+        store.conn.execute(
+            "UPDATE imports SET accepted_rows=?,rejected_rows=?,control_debits=?,control_credits=? WHERE id=?",
+            (accepted, rejected, debits, credits, import_id),
+        )
+        store.log(
+            actor,
+            "import_gl",
+            "import",
+            import_id,
+            {"accepted": accepted, "rejected": rejected, "sha256": digest, "mapping": mapping or {}, "expected_rows": expected_rows, "expected_debits": expected_debits, "expected_credits": expected_credits, "supersedes_import_id": supersedes},
+        )
+        if commit:
+            store.conn.commit()
+        return import_id, accepted, rejected, debits, credits
+    except Exception:
+        store.conn.rollback()
+        if "target" in locals():
+            _cleanup_evidence(target, created)
+        raise
 
-def import_coa(store: Store, filename: str, actor="system"):
-    source = Path(filename); rows = list(_rows(source)); digest = hashlib.sha256(source.read_bytes()).hexdigest()
-    evidence = store.path.parent / "evidence"; evidence.mkdir(exist_ok=True); target = evidence / f"{digest[:12]}_{source.name}"
-    if not target.exists(): shutil.copy2(source, target)
-    cur = store.conn.execute("INSERT INTO imports(kind,original_name,evidence_path,sha256,imported_at,accepted_rows,rejected_rows) VALUES('coa',?,?,?,?,?,?)", (source.name, str(target), digest, __import__('time').time(), 0, 0)); iid = cur.lastrowid
-    for raw in rows:
-        # _key strips non-alphanumerics, so lookups must match that form.
-        r = {_key(k): v for k, v in raw.items()}
-        code = r.get("accountcode") or r.get("account") or r.get("glcode")
-        if code: store.conn.execute("INSERT OR REPLACE INTO coa VALUES(?,?,?,?)", (str(code), r.get("accountname") or r.get("name"), r.get("accounttype") or r.get("type"), iid))
-    store.conn.execute("UPDATE imports SET accepted_rows=? WHERE id=?", (len(rows), iid)); store.log(actor, "import_coa", "import", iid, {"rows": len(rows)}); store.conn.commit(); return iid
+def import_coa(store: Store, filename: str, actor="system", reimport: bool = False):
+    source = Path(filename)
+    _validate_source(source)
+    rows = list(_rows(source))
+    store.conn.execute("BEGIN IMMEDIATE")
+    created = False
+    try:
+        digest, target, created, supersedes = _evidence_target(store, source, "coa", reimport)
+        cur = store.conn.execute(
+            """INSERT INTO imports(kind,original_name,evidence_path,sha256,imported_at,accepted_rows,rejected_rows,supersedes_import_id)
+               VALUES('coa',?,?,?,?,?,?,?)""",
+            (source.name, str(target), digest, __import__('time').time(), 0, 0, supersedes),
+        )
+        iid = cur.lastrowid
+        for raw in rows:
+            # _key strips non-alphanumerics, so lookups must match that form.
+            r = {_key(k): v for k, v in raw.items()}
+            code = r.get("accountcode") or r.get("account") or r.get("glcode")
+            if code:
+                store.conn.execute(
+                    "INSERT OR REPLACE INTO coa VALUES(?,?,?,?)",
+                    (str(code), r.get("accountname") or r.get("name"), r.get("accounttype") or r.get("type"), iid),
+                )
+        store.conn.execute("UPDATE imports SET accepted_rows=? WHERE id=?", (len(rows), iid))
+        store.log(actor, "import_coa", "import", iid, {"rows": len(rows), "sha256": digest, "supersedes_import_id": supersedes})
+        store.conn.commit()
+        return iid
+    except Exception:
+        store.conn.rollback()
+        if "target" in locals():
+            _cleanup_evidence(target, created)
+        raise

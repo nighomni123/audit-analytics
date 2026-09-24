@@ -13,6 +13,8 @@ import urllib.error
 import urllib.request
 from collections import Counter
 
+import numpy as np
+
 from .store import Store
 
 STOPWORDS = frozenset("a an and as at by for from in is of on or the to with being entry journal voucher".split())
@@ -131,24 +133,49 @@ def similar_transactions(store: Store, query: str, limit=25, model="embeddinggem
     Embedding similarity can add semantically related candidates, but never
     suppresses a strong transparent token/account-head match.
     """
+    if not isinstance(query, str) or not query.strip() or len(query) > 1000:
+        raise ValueError("query must contain 1 to 1000 characters")
+    if isinstance(limit, bool) or not isinstance(limit, int) or not 1 <= limit <= 100:
+        raise ValueError("limit must be an integer from 1 to 100")
     query_tokens = tokens(query)
-    if not query_tokens: raise ValueError("query must contain meaningful transaction or account-head terms")
-    rows = _entries(store); doc_freq = Counter(t for e in rows for t in tokens(_text(e)))
-    n = max(1, len(rows)); query_vector = None; dims = None
+    if not query_tokens:
+        raise ValueError("query must contain meaningful transaction or account-head terms")
+    rows = _entries(store)
+    prepared = []
+    for entry in rows:
+        text = _text(entry)
+        prepared.append((entry, text, tokens(text)))
+    doc_freq = Counter(token for _, _, entry_tokens in prepared for token in entry_tokens)
+    n = max(1, len(rows))
+    semantic_scores = {}
     embedded = store.conn.execute("SELECT dims FROM ledger_embeddings WHERE model=? LIMIT 1", (model,)).fetchone()
     if embedded:
-        dims = embedded[0]; query_vector = LocalEmbedder(model).embed([query])[0]
-        if len(query_vector) != dims: raise ValueError("local model dimensions changed; rerun embed-ledger for this model")
+        dims = embedded[0]
+        vector_rows = store.conn.execute(
+            "SELECT ledger_id,vector FROM ledger_embeddings WHERE model=? AND dims=? ORDER BY ledger_id", (model, dims)
+        ).fetchall()
+        query_vector = LocalEmbedder(model).embed([query])[0]
+        if len(query_vector) != dims:
+            raise ValueError("local model dimensions changed; rerun embed-ledger for this model")
+        if vector_rows:
+            matrix = np.vstack([np.frombuffer(row["vector"], dtype="<f4") for row in vector_rows])
+            if matrix.shape[1] != dims or not np.isfinite(matrix).all():
+                raise ValueError("stored embeddings contain invalid dimensions or values")
+            matrix64 = matrix.astype(np.float64)
+            norms = np.sqrt(np.sum(matrix64**2, axis=1))
+            query_array = np.frombuffer(query_vector, dtype="<f4").astype(np.float64)
+            query_norm = math.sqrt(float(np.dot(query_array, query_array)))
+            if not np.isfinite(norms).all() or not math.isfinite(query_norm) or np.any(norms == 0) or query_norm == 0:
+                raise ValueError("cosine requires finite nonzero norms")
+            cosine = np.clip((matrix64 @ query_array) / (norms * query_norm), -1.0, 1.0)
+            semantic_scores = {row["ledger_id"]: max(0.0, float(value)) for row, value in zip(vector_rows, cosine)}
     scored = []
-    for entry in rows:
-        text = _text(entry); entry_tokens = tokens(text); union = query_tokens | entry_tokens
-        weighted_shared = sum(math.log((n + 1) / (doc_freq[t] + 1)) + 1 for t in query_tokens & entry_tokens)
-        weighted_all = sum(math.log((n + 1) / (doc_freq[t] + 1)) + 1 for t in union)
+    for entry, text, entry_tokens in prepared:
+        union = query_tokens | entry_tokens
+        weighted_shared = sum(math.log((n + 1) / (doc_freq[token] + 1)) + 1 for token in query_tokens & entry_tokens)
+        weighted_all = sum(math.log((n + 1) / (doc_freq[token] + 1)) + 1 for token in union)
         token_score = weighted_shared / weighted_all if weighted_all else 0.0
-        semantic_score = None
-        if query_vector is not None:
-            row = store.conn.execute("SELECT vector FROM ledger_embeddings WHERE ledger_id=? AND model=? AND dims=?", (entry["id"], model, dims)).fetchone()
-            if row: semantic_score = max(0.0, _cosine(query_vector, array.array("f", row[0])))
+        semantic_score = semantic_scores.get(entry["id"])
         score = max(token_score, semantic_score or 0.0)
         if score:
             scored.append({"ledger_id": entry["id"], "entry_id": entry["entry_id"], "posting_date": entry["posting_date"], "account_code": entry["account_code"], "account_name": entry.get("account_name"), "signed_amount": entry["signed_amount"], "description": entry["description"], "preparer": entry["preparer"], "reference": entry["reference"], "token_score": round(token_score, 3), "semantic_score": round(semantic_score, 3) if semantic_score is not None else None, "score": round(score, 3), "shared_tokens": sorted(query_tokens & entry_tokens), "token_classes": classify(text)})

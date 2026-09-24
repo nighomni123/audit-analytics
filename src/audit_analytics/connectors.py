@@ -81,14 +81,19 @@ def run_connector(name: str, store, path: str, actor: str):
         w.writeheader()
         w.writerows(rows)
         tmpcsv = tmp.name
-    import_id, accepted, rejected, debits, credits = import_gl(store, tmpcsv, actor)
-    now = time.time()
-    store.conn.execute(
-        "INSERT INTO connector_runs(connector, identity, source_system, extracted_at,"
-        " record_count, control_debits, control_credits, created_at)"
-        " VALUES(?,?,?,?,?,?,?,?)",
-        (name, actor, "demo_csv", now, accepted, debits, credits, now))
-    store.conn.commit()
-    Path(tmpcsv).unlink(missing_ok=True)
-    return (import_id, {"connector": name, "accepted": accepted, "record_count": accepted,
-                       "control_debits": debits, "control_credits": credits})
+    try:
+        import_id, accepted, rejected, debits, credits = import_gl(store, tmpcsv, actor, commit=False)
+        now = time.time()
+        store.conn.execute(
+            "INSERT INTO connector_runs(connector, identity, source_system, extracted_at,"
+            " record_count, control_debits, control_credits, created_at)"
+            " VALUES(?,?,?,?,?,?,?,?)",
+            (name, actor, "demo_csv", now, accepted, debits, credits, now))
+        store.conn.commit()
+        return (import_id, {"connector": name, "accepted": accepted, "record_count": accepted,
+                           "control_debits": debits, "control_credits": credits})
+    except Exception:
+        store.conn.rollback()
+        raise
+    finally:
+        Path(tmpcsv).unlink(missing_ok=True)

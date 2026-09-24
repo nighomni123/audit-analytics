@@ -6,6 +6,8 @@ import time
 from pathlib import Path
 
 
+SCHEMA_VERSION = 1
+
 SCHEMA = """
 PRAGMA foreign_keys=ON;
 CREATE TABLE IF NOT EXISTS engagement (
@@ -16,7 +18,8 @@ CREATE TABLE IF NOT EXISTS imports (
   id INTEGER PRIMARY KEY, kind TEXT NOT NULL, original_name TEXT NOT NULL,
   evidence_path TEXT NOT NULL, sha256 TEXT NOT NULL, imported_at REAL NOT NULL,
   accepted_rows INTEGER NOT NULL, rejected_rows INTEGER NOT NULL, control_debits REAL,
-  control_credits REAL, acknowledged_at REAL, acknowledged_by TEXT, acknowledgement_note TEXT
+  control_credits REAL, acknowledged_at REAL, acknowledged_by TEXT, acknowledgement_note TEXT,
+  supersedes_import_id INTEGER REFERENCES imports(id)
 );
 CREATE TABLE IF NOT EXISTS connector_runs (
   id INTEGER PRIMARY KEY, connector TEXT NOT NULL, identity TEXT, source_system TEXT,
@@ -30,6 +33,15 @@ CREATE TABLE IF NOT EXISTS users (
 CREATE TABLE IF NOT EXISTS settings (
   key TEXT PRIMARY KEY, value_json TEXT NOT NULL, updated_at REAL NOT NULL, updated_by TEXT NOT NULL
 );
+CREATE TABLE IF NOT EXISTS review_set_events (
+  id INTEGER PRIMARY KEY, event TEXT NOT NULL CHECK(event IN ('locked','reopened')),
+  actor TEXT NOT NULL, reason TEXT NOT NULL, created_at REAL NOT NULL
+);
+CREATE INDEX IF NOT EXISTS review_set_events_latest ON review_set_events(id DESC);
+CREATE TRIGGER IF NOT EXISTS review_set_events_no_update BEFORE UPDATE ON review_set_events
+BEGIN SELECT RAISE(ABORT,'review-set events are append-only'); END;
+CREATE TRIGGER IF NOT EXISTS review_set_events_no_delete BEFORE DELETE ON review_set_events
+BEGIN SELECT RAISE(ABORT,'review-set events are append-only'); END;
 CREATE TABLE IF NOT EXISTS import_mappings (
   name TEXT PRIMARY KEY, mapping_json TEXT NOT NULL, created_at REAL NOT NULL, created_by TEXT NOT NULL
 );
@@ -68,12 +80,33 @@ CREATE TABLE IF NOT EXISTS exceptions (
 );
 CREATE TABLE IF NOT EXISTS reviews (
   id INTEGER PRIMARY KEY, exception_id INTEGER NOT NULL REFERENCES exceptions(id), reviewer TEXT NOT NULL,
-  disposition TEXT NOT NULL, note TEXT NOT NULL, created_at REAL NOT NULL
+  disposition TEXT NOT NULL CHECK(disposition IN ('open','cleared','follow_up','selected_for_testing')),
+  note TEXT NOT NULL, created_at REAL NOT NULL, second_reviewer TEXT, second_note TEXT
 );
+CREATE INDEX IF NOT EXISTS reviews_exception_latest ON reviews(exception_id,id DESC);
+CREATE TRIGGER IF NOT EXISTS reviews_sync_exception_status AFTER INSERT ON reviews
+BEGIN
+  UPDATE exceptions SET status=NEW.disposition WHERE id=NEW.exception_id;
+END;
+CREATE TRIGGER IF NOT EXISTS exceptions_status_matches_review BEFORE UPDATE OF status ON exceptions
+WHEN NOT EXISTS (
+  SELECT 1 FROM reviews WHERE exception_id=OLD.id AND disposition=NEW.status ORDER BY id DESC LIMIT 1
+)
+BEGIN
+  SELECT RAISE(ABORT,'exception status must match latest review');
+END;
+CREATE TRIGGER IF NOT EXISTS reviews_no_update BEFORE UPDATE ON reviews
+BEGIN SELECT RAISE(ABORT,'reviews are append-only'); END;
+CREATE TRIGGER IF NOT EXISTS reviews_no_delete BEFORE DELETE ON reviews
+BEGIN SELECT RAISE(ABORT,'reviews are append-only'); END;
 CREATE TABLE IF NOT EXISTS audit_log (
   id INTEGER PRIMARY KEY, created_at REAL NOT NULL, actor TEXT NOT NULL, action TEXT NOT NULL,
   target_type TEXT NOT NULL, target_id TEXT NOT NULL, detail_json TEXT NOT NULL
 );
+CREATE TRIGGER IF NOT EXISTS audit_log_no_update BEFORE UPDATE ON audit_log
+BEGIN SELECT RAISE(ABORT,'audit log is append-only'); END;
+CREATE TRIGGER IF NOT EXISTS audit_log_no_delete BEFORE DELETE ON audit_log
+BEGIN SELECT RAISE(ABORT,'audit log is append-only'); END;
 CREATE TABLE IF NOT EXISTS ledger_embeddings (
   ledger_id INTEGER NOT NULL REFERENCES ledger_entries(id), model TEXT NOT NULL,
   dims INTEGER NOT NULL, text_hash TEXT NOT NULL, vector BLOB NOT NULL,
@@ -119,6 +152,10 @@ CREATE TABLE IF NOT EXISTS sample_items (
   sample_set_id INTEGER NOT NULL REFERENCES sample_sets(id), ledger_id INTEGER NOT NULL REFERENCES ledger_entries(id),
   rationale TEXT NOT NULL, PRIMARY KEY(sample_set_id, ledger_id)
 );
+CREATE TABLE IF NOT EXISTS model_registry (
+  id INTEGER PRIMARY KEY, name TEXT UNIQUE, model_type TEXT, feature_schema_json TEXT, owner TEXT,
+  status TEXT, performance_json TEXT, approved_by TEXT, created_at REAL, created_by TEXT
+);
 """
 
 
@@ -126,28 +163,59 @@ class Store:
     def __init__(self, path: str):
         self.path = Path(path)
         self.path.parent.mkdir(parents=True, exist_ok=True)
-        self.conn = sqlite3.connect(self.path)
+        self.conn = sqlite3.connect(self.path, timeout=5.0)
         self.conn.row_factory = sqlite3.Row
+        self.conn.execute("PRAGMA foreign_keys=ON")
         self.conn.execute("PRAGMA journal_mode=WAL")
         self.conn.executescript(SCHEMA)
         self._migrate()
         self.conn.commit()
 
     def _migrate(self):
-        """Keep engagement databases additive as features are introduced."""
+        """Apply additive schema changes and reject partial migrations loudly."""
+        current_version = self.conn.execute("PRAGMA user_version").fetchone()[0]
+        if current_version > SCHEMA_VERSION:
+            raise RuntimeError(f"database schema {current_version} is newer than supported schema {SCHEMA_VERSION}")
         migrations = [
             ("ledger_entries", "vendor", "TEXT"),
             ("imports", "expected_rows", "INTEGER"), ("imports", "expected_debits", "REAL"),
             ("imports", "expected_credits", "REAL"), ("imports", "reconciled_at", "REAL"),
             ("imports", "reconciled_by", "TEXT"), ("imports", "reconciliation_note", "TEXT"),
+            ("imports", "supersedes_import_id", "INTEGER REFERENCES imports(id)"),
             ("exceptions", "assigned_to", "TEXT"), ("exceptions", "due_date", "TEXT"),
             ("exceptions", "materiality_band", "TEXT"),
             ("model_runs", "model_name", "TEXT"), ("model_runs", "validation_status", "TEXT"),
             ("reviews", "second_reviewer", "TEXT"), ("reviews", "second_note", "TEXT"),
         ]
         for table, column, definition in migrations:
-            try: self.conn.execute(f"ALTER TABLE {table} ADD COLUMN {column} {definition}")
-            except sqlite3.OperationalError: pass
+            columns = {row["name"] for row in self.conn.execute(f"PRAGMA table_info({table})")}
+            if column not in columns:
+                self.conn.execute(f"ALTER TABLE {table} ADD COLUMN {column} {definition}")
+
+        # Keep the materialized status cache aligned with immutable review history.
+        self.conn.execute("""UPDATE exceptions SET status=(
+            SELECT disposition FROM reviews WHERE reviews.exception_id=exceptions.id ORDER BY reviews.id DESC LIMIT 1
+        ) WHERE EXISTS(SELECT 1 FROM reviews WHERE reviews.exception_id=exceptions.id)""")
+
+        # Older databases used a mutable settings row. Preserve that state once as history.
+        legacy = self.get_setting("review_locked", None)
+        has_event = self.conn.execute("SELECT 1 FROM review_set_events LIMIT 1").fetchone()
+        if legacy and not has_event:
+            if legacy.get("locked_at"):
+                event, actor, changed_at = "locked", legacy.get("locked_by") or "legacy", legacy["locked_at"]
+            elif legacy.get("reopened_at"):
+                event, actor, changed_at = "reopened", legacy.get("reopened_by") or "legacy", legacy["reopened_at"]
+            else:
+                event = None
+            if event:
+                self.conn.execute(
+                    "INSERT INTO review_set_events(event,actor,reason,created_at) VALUES(?,?,?,?)",
+                    (event, actor, "Migrated legacy review-lock setting", changed_at),
+                )
+        self.conn.execute(f"PRAGMA user_version={SCHEMA_VERSION}")
+
+    def schema_version(self) -> int:
+        return self.conn.execute("PRAGMA user_version").fetchone()[0]
 
     def log(self, actor: str, action: str, target_type: str, target_id: str | int, detail: dict):
         self.conn.execute("INSERT INTO audit_log VALUES(NULL,?,?,?,?,?,?)",
@@ -162,6 +230,11 @@ class Store:
     def get_setting(self, key: str, default=None):
         row = self.conn.execute("SELECT value_json FROM settings WHERE key=?", (key,)).fetchone()
         return json.loads(row[0]) if row else default
+
+    def existing_import(self, kind: str, sha256: str):
+        return self.conn.execute(
+            "SELECT * FROM imports WHERE kind=? AND sha256=? ORDER BY id DESC LIMIT 1", (kind, sha256)
+        ).fetchone()
 
     def add_user(self, username: str, role: str, actor="system"):
         if role not in {"preparer", "reviewer", "manager", "partner", "quality_reviewer", "read_only"}: raise ValueError("invalid role")
@@ -185,17 +258,20 @@ class Store:
         row = self.conn.execute("SELECT COUNT(*) FROM imports WHERE kind='gl' AND acknowledged_at IS NULL").fetchone()
         return row[0] == 0 and self.conn.execute("SELECT COUNT(*) FROM imports WHERE kind='gl'").fetchone()[0] > 0
 
-    def set_review_lock(self, actor: str):
-        self.set_setting("review_locked", {"locked_at": time.time(), "locked_by": actor}, actor)
+    def review_set_state(self):
+        row = self.conn.execute("SELECT * FROM review_set_events ORDER BY id DESC LIMIT 1").fetchone()
+        if row is None:
+            return {"locked": False, "event": None, "actor": None, "reason": None, "changed_at": None}
+        return {
+            "locked": row["event"] == "locked", "event": row["event"], "actor": row["actor"],
+            "reason": row["reason"], "changed_at": row["created_at"],
+        }
 
-    def clear_review_lock(self, actor: str):
-        # Additive reopening: keep the lock's history, just mark it reopened.
-        prior = self.get_setting("review_locked", {})
-        prior.update({"locked_at": None, "reopened_by": actor, "reopened_at": time.time()})
-        self.set_setting("review_locked", prior, actor)
+    def review_set_history(self):
+        return [dict(row) for row in self.conn.execute("SELECT * FROM review_set_events ORDER BY id")]
 
     def review_locked(self):
-        return bool(self.get_setting("review_locked", {}).get("locked_at"))
+        return self.review_set_state()["locked"]
 
     def close(self):
         self.conn.close()

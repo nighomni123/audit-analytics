@@ -4,7 +4,7 @@ Audience: developer / researcher. Permanent reference, not a build checklist.
 
 ## 1. Purpose
 
-Add an optional, reproducible, explainable semantic layer to the local audit analytics pipeline (`audit_analytics`). It must never suppress lexical search (`max(token, cosine)`), never infer fraud, never issue an opinion, and must stay fully local (same-host Ollama only; no external embeddings, no cloud LLM, no vector database, no new Python dependencies).
+Add an optional, reproducible, explainable semantic layer to the local audit analytics pipeline (`audit_analytics`). It must never suppress lexical search (`max(token, cosine)`), never infer fraud, never issue an opinion, and must stay fully local (same-host Ollama only; no external embeddings, no cloud LLM, no vector database). The exact local search path uses the declared NumPy dependency; semantic-risk candidate selection remains bounded and disclosed.
 
 Scope: narration-only embeddings (no account code, label, vendor/preparer identifier, amount, or date leakage); versioned semantic profiles; deterministic clustering; explainable cues; offline label-based evaluation; investigation UI; zero-cue evidence retention.
 
@@ -34,7 +34,9 @@ Key invariants (hard):
 - **Deterministic clustering.** Seed 7, bounded training (≤512), bounded candidates (≤64), bounded iterations (≤10), capped k (`min(12, max(2, floor(sqrt(n/5))))`).
 - **Immutable runs.** Profile/run results are append-only; interruption leaves non-consumable running records and rolls back partial results.
 - **Stale-population guard.** Linkage to an analysis requires matching population fingerprint; changed imports reject linkage.
-- **Zero-cue retention.** `analysis_signal_results` (run_id + ledger_id + components_json) persists even when no cues fire so investigation never shows `components: null` for an evaluated entry.
+- **Zero-cue retention.** `analysis_signal_results` persists evaluated components even when no cue fires, so investigation never substitutes `null` for an evaluated entry.
+- **Approximation disclosure.** Every semantic run records `retrieval.method = deterministic_bounded_candidates`, `exhaustive = false`, candidate/training limits, and deterministic tie-breaking in its summary and linked analysis configuration. Consumers must not present these metrics as population-exhaustive nearest-neighbour results.
+- **Exact lexical/vector search.** The ordinary `similar` route batches vectors for one model/dimension and computes exact cosine scores with NumPy; it does not silently switch to ANN. The 100k ceiling is a local performance target measured by `scripts/benchmark_similarity.py`.
 
 ## 3. Data model (additive schema only)
 
@@ -98,7 +100,7 @@ python3 run.py semantic-evaluate --db ... --run ID --labels ... --actor ...
 
 API (read-only GET): `/api/semantic-profile?run=ID`; `/api/semantic-investigation?run=ID&ledger_id=ID`. No computation in GET; validate positive IDs; 400 for invalid; 404 for absent; explicit stale-state notice.
 
-UI (`server.py` review page): sections for Why flagged / Normal peers / Alternative matches / Related population / Other signals / Suggested evidence. Source IDs, dates/counts, provenance, missing-data notes, approximation disclosures. Static evidence suggestions only. Keyboard-accessible labelled controls; loading/error/empty states; no automatic dispositions or graph editor.
+UI (FastAPI + React workbench): sections for Why flagged / Normal peers / Alternative matches / Related population / Other signals / Suggested evidence. Source IDs, dates/counts, provenance, missing-data notes, approximation disclosures. Static evidence suggestions only. Keyboard-accessible labelled controls; loading/error/empty states; no automatic dispositions or graph editor.
 
 Zero-cue entries: investigation shows `semantic_contribution: 0` with `components_source: analysis_snapshot` (not `null`); `other_signals` carries an explicit note when linked-run evidence is unavailable.
 
