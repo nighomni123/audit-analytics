@@ -66,7 +66,8 @@ def _calculate_signals(entries, policy, period_end, fiscal_calendar, taxonomy, i
     for entry in entries:
         amount = round(abs(entry["signed_amount"]), 2)
         by_account[entry["account_code"]].append(entry)
-        by_user_pair[(entry["account_code"], entry["preparer"] or "")] += 1
+        if entry["account_code"] and entry["preparer"]:
+            by_user_pair[(entry["account_code"], entry["preparer"])] += 1
         if entry["reference"]:
             by_key[(entry["account_code"], entry["reference"], amount)].append(entry)
         by_key[(entry["account_code"], entry["posting_date"], amount, entry["description"] or "")].append(entry)
@@ -94,9 +95,11 @@ def _calculate_signals(entries, policy, period_end, fiscal_calendar, taxonomy, i
             reasons[ledger_id].append("period_end_posting")
         if posted.weekday() >= 5:
             reasons[ledger_id].append("weekend_posting")
-        if by_user_pair[(entry["account_code"], entry["preparer"] or "")] <= 2:
+        if not entry["account_code"] or not entry["preparer"]:
+            evidence[ledger_id]["rare_account_preparer_pair_applicability"] = "not_applicable_missing_identity"
+        elif by_user_pair[(entry["account_code"], entry["preparer"])] <= 2:
             reasons[ledger_id].append("rare_account_preparer_pair")
-        if any(timedelta(0) <= posted - fiscal_date <= timedelta(days=window) for fiscal_date in fiscal_dates):
+        if any(timedelta(0) <= fiscal_date - posted <= timedelta(days=window) for fiscal_date in fiscal_dates):
             reasons[ledger_id].append("fiscal_period_end")
         if entry["account_code"] in taxonomy:
             evidence[ledger_id]["account_type"], evidence[ledger_id]["account_label"] = taxonomy[entry["account_code"]]
@@ -182,7 +185,7 @@ def analyze(store: Store, actor="system", include_isolation=True, semantic_run_i
                 'amount': 'flagged' if set(deterministic_reasons) & {'round_amount','robust_account_peer_outlier'} else 'not flagged',
                 'robust_amount_peer': 'flagged' if 'robust_account_peer_outlier' in deterministic_reasons else 'not flagged' if amount_mad else 'not applicable',
                 'timing': 'flagged' if set(deterministic_reasons) & {'period_end_posting','weekend_posting','fiscal_period_end'} else 'not flagged',
-                'frequency': 'flagged' if 'rare_account_preparer_pair' in deterministic_reasons else 'not flagged',
+                'frequency': 'not applicable' if (not e['account_code'] or not e['preparer']) else 'flagged' if 'rare_account_preparer_pair' in deterministic_reasons else 'not flagged',
             }
             reasons[e["id"]].extend(semantic_cues)
             evidence[e["id"]]["semantic"] = {"run_id": semantic_run_id, "metrics": json.loads(semantic[e["id"]]["metrics_json"]), "cues": semantic_cues, "evidence": json.loads(semantic[e["id"]]["evidence_json"])}
