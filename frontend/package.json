@@ -15,19 +15,19 @@
     "capture:web": "node scripts/capture_web.cjs"
   },
   "dependencies": {
-    "react": "18.3.1",
-    "react-dom": "18.3.1"
+    "react": "19.3.0",
+    "react-dom": "19.3.0"
   },
   "devDependencies": {
-    "@playwright/test": "1.55.1",
+    "@playwright/test": "1.63.0",
     "@tailwindcss/postcss": "4.3.3",
-    "@types/react": "18.3.31",
-    "@types/react-dom": "18.3.7",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
     "@vitejs/plugin-react": "6.1.1",
     "autoprefixer": "10.6.1",
     "postcss": "8.5.28",
     "tailwindcss": "4.3.3",
-    "typescript": "5.9.3",
+    "typescript": "7.0.2",
     "vite": "8.3.0"
   }
 }
