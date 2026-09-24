@@ -1,0 +1,19 @@
+{
+  "commit": "0dd6fda07abd028018514221ccbb592deb0b6842",
+  "commands": [
+    {"command": "uv lock --check", "result": "pass"},
+    {"command": "uv sync --frozen --all-extras --group dev", "result": "pass from removed .venv"},
+    {"command": "uv run python -m compileall -q src run.py", "result": "pass"},
+    {"command": "uv run pytest -q -p no:cacheprovider", "result": "38 passed, 1 warning, 3 subtests"},
+    {"command": "npm --prefix frontend ci --ignore-scripts", "result": "pass, 59 packages, 0 vulnerabilities"},
+    {"command": "npm --prefix frontend run typecheck", "result": "pass"},
+    {"command": "npm --prefix frontend run build", "result": "pass"},
+    {"command": "npm --prefix frontend audit --audit-level=high", "result": "pass, 0 vulnerabilities"},
+    {"command": "uv run pip-audit --local", "result": "no known vulnerabilities; local project skipped as not on PyPI"},
+    {"command": "PLAYWRIGHT_CHROMIUM=<approved external Chromium> npm --prefix frontend run test:e2e", "result": "1 passed"},
+    {"command": "uv build && uv run twine check dist/*", "result": "pass"},
+    {"command": "python3 scripts/check_repo.py && python3 scripts/check_licenses.py", "result": "pass"},
+    {"command": "docker gitleaks scan", "result": "not executed: Docker daemon unavailable"},
+    {"command": "Ollama /api/version", "result": "not executed: connection refused"}
+  ]
+}

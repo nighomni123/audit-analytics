@@ -1,0 +1,11 @@
+{
+  "python_unit_integration": {"tests": 11, "passed": 11, "failed": 0, "skipped": 0, "duration_seconds": 1.20},
+  "api_contracts": {"tests": 5, "passed": 5, "failed": 0, "skipped": 0, "duration_seconds": 3.34},
+  "semantic": {"tests": 12, "passed": 12, "failed": 0, "skipped": 0, "duration_seconds": 4.89},
+  "workflow": {"tests": 9, "passed": 9, "failed": 0, "skipped": 0, "duration_seconds": 3.88},
+  "operations": {"tests": 1, "passed": 1, "failed": 0, "skipped": 0, "duration_seconds": 0.17},
+  "frontend_typecheck": {"tests": 0, "passed": 0, "failed": 0, "skipped": 0, "duration_seconds": 9.32},
+  "frontend_build": {"tests": 0, "passed": 0, "failed": 0, "skipped": 0, "duration_seconds": 11.92},
+  "browser_e2e": {"tests": 1, "passed": 1, "failed": 0, "skipped": 0, "duration_seconds": 23.4},
+  "total_python": {"tests": 38, "passed": 38, "failed": 0, "skipped": 0, "duration_seconds": 21.01}
+}

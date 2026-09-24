@@ -1,0 +1,277 @@
+{
+  "api_security": {
+    "cors_header": null,
+    "create": 200,
+    "health": 200,
+    "invalid_review": {
+      "body": {
+        "error": {
+          "code": "validation_error",
+          "details": {
+            "fields": [
+              {
+                "ctx": {
+                  "gt": 0
+                },
+                "input": -1,
+                "loc": [
+                  "body",
+                  "id"
+                ],
+                "msg": "Input should be greater than 0",
+                "type": "greater_than"
+              },
+              {
+                "ctx": {
+                  "min_length": 1
+                },
+                "input": "",
+                "loc": [
+                  "body",
+                  "reviewer"
+                ],
+                "msg": "String should have at least 1 character",
+                "type": "string_too_short"
+              },
+              {
+                "ctx": {
+                  "expected": "'open', 'cleared', 'follow_up' or 'selected_for_testing'"
+                },
+                "input": "bad",
+                "loc": [
+                  "body",
+                  "disposition"
+                ],
+                "msg": "Input should be 'open', 'cleared', 'follow_up' or 'selected_for_testing'",
+                "type": "literal_error"
+              },
+              {
+                "ctx": {
+                  "min_length": 1
+                },
+                "input": "",
+                "loc": [
+                  "body",
+                  "note"
+                ],
+                "msg": "String should have at least 1 character",
+                "type": "string_too_short"
+              }
+            ]
+          },
+          "message": "request validation failed"
+        }
+      },
+      "status": 422
+    },
+    "long_filename": {
+      "body": {
+        "file": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx.csv",
+        "headers": [
+          "entry_id",
+          "posting_date",
+          "account_code",
+          "amount"
+        ],
+        "mapping": {
+          "account_code": "account_code",
+          "amount": "amount",
+          "credit": null,
+          "debit": null,
+          "description": null,
+          "document_date": null,
+          "entity": null,
+          "entry_id": "entry_id",
+          "is_manual": null,
+          "posting_date": "posting_date",
+          "preparer": null,
+          "reference": null,
+          "vendor": null
+        },
+        "missing_required": [],
+        "sample_rows": [
+          {
+            "account_code": "1",
+            "amount": "1",
+            "entry_id": "A",
+            "posting_date": "2025-01-01"
+          }
+        ]
+      },
+      "outside_artifacts": [],
+      "status": 200
+    },
+    "security_headers": {
+      "content-security-policy": "default-src 'self'; connect-src 'self'; img-src 'self' data:; style-src 'self'; script-src 'self'; object-src 'none'; base-uri 'self'; frame-ancestors 'none'",
+      "x-frame-options": "DENY",
+      "x-request-id": "97416128c05e15aa"
+    },
+    "trusted_host_rejection": 400,
+    "unsupported_upload": {
+      "body": {
+        "error": {
+          "code": "invalid_file",
+          "message": "upload a .csv or .xlsx file"
+        }
+      },
+      "status": 400
+    },
+    "users": [
+      {
+        "role": "manager",
+        "username": "manager"
+      }
+    ]
+  },
+  "dependency_checks": {
+    "compileall": {
+      "command": [
+        "uv",
+        "run",
+        "python",
+        "-m",
+        "compileall",
+        "-q",
+        "src",
+        "run.py"
+      ],
+      "returncode": 0,
+      "seconds": 0.26413132800371386,
+      "stderr": "",
+      "stdout": ""
+    },
+    "frontend_audit": {
+      "command": [
+        "npm",
+        "--prefix",
+        "frontend",
+        "audit",
+        "--audit-level=high"
+      ],
+      "returncode": 0,
+      "seconds": 3.6173822160053533,
+      "stderr": "",
+      "stdout": "found 0 vulnerabilities\n"
+    },
+    "frontend_build": {
+      "command": [
+        "npm",
+        "--prefix",
+        "frontend",
+        "run",
+        "build"
+      ],
+      "returncode": 0,
+      "seconds": 11.924124003009638,
+      "stderr": "",
+      "stdout": "\n> audit-analytics-frontend@1.0.0 build\n> npm run typecheck && vite build\n\n\n> audit-analytics-frontend@1.0.0 typecheck\n> tsc --noEmit\n\nvite v8.3.0 building client environment for production...\ntransforming...\n\u2713 24 modules transformed.\nrendering chunks...\ncomputing gzip size...\n../src/audit_analytics/static/index.html                   0.44 kB \u2502 gzip:  0.32 kB\n../src/audit_analytics/static/assets/index-BnB1cnOE.css   16.92 kB \u2502 gzip:  4.25 kB\n../src/audit_analytics/static/assets/index-C6pPJgXd.js   183.19 kB \u2502 gzip: 55.63 kB\n\n\u2713 built in 1.17s\n"
+    },
+    "frontend_ci": {
+      "command": [
+        "npm",
+        "--prefix",
+        "frontend",
+        "ci",
+        "--ignore-scripts"
+      ],
+      "returncode": 0,
+      "seconds": 7.868406323003001,
+      "stderr": "",
+      "stdout": "\nadded 59 packages, and audited 60 packages in 7s\n\n17 packages are looking for funding\n  run `npm fund` for details\n\nfound 0 vulnerabilities\n"
+    },
+    "frontend_typecheck": {
+      "command": [
+        "npm",
+        "--prefix",
+        "frontend",
+        "run",
+        "typecheck"
+      ],
+      "returncode": 0,
+      "seconds": 9.324624873988796,
+      "stderr": "",
+      "stdout": "\n> audit-analytics-frontend@1.0.0 typecheck\n> tsc --noEmit\n\n"
+    },
+    "license_policy": {
+      "command": [
+        "python3",
+        "scripts/check_licenses.py"
+      ],
+      "returncode": 0,
+      "seconds": 0.10611678000714164,
+      "stderr": "",
+      "stdout": "Frontend license metadata policy passed.\n"
+    },
+    "pip_audit": {
+      "command": [
+        "uv",
+        "run",
+        "pip-audit",
+        "--local"
+      ],
+      "returncode": 0,
+      "seconds": 23.649276746000396,
+      "stderr": "No known vulnerabilities found\n",
+      "stdout": "Name            Skip Reason\n--------------- ------------------------------------------------------------------------------\naudit-analytics Dependency not found on PyPI and could not be audited: audit-analytics (1.0.0)\n"
+    },
+    "pytest": {
+      "command": [
+        "uv",
+        "run",
+        "pytest",
+        "-q",
+        "-p",
+        "no:cacheprovider"
+      ],
+      "returncode": 0,
+      "seconds": 23.48416604900558,
+      "stderr": "",
+      "stdout": "......................................                                [100%]\n=============================== warnings summary ===============================\n.venv/lib/python3.10/site-packages/fastapi/testclient.py:1\n  /Users/Mitesh Gada/Documents/Projects/audit-analytics/.venv/lib/python3.10/site-packages/fastapi/testclient.py:1: StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.\n    from starlette.testclient import TestClient as TestClient  # noqa\n\n-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html\n38 passed, 1 warning, 3 subtests passed in 21.01s\n"
+    },
+    "repo_policy": {
+      "command": [
+        "python3",
+        "scripts/check_repo.py"
+      ],
+      "returncode": 0,
+      "seconds": 0.3704235780023737,
+      "stderr": "",
+      "stdout": "Repository policy passed for 99 tracked files.\n"
+    },
+    "uv_lock_check": {
+      "command": [
+        "uv",
+        "lock",
+        "--check"
+      ],
+      "returncode": 0,
+      "seconds": 0.09537602600175887,
+      "stderr": "Resolved 100 packages in 13ms\n",
+      "stdout": ""
+    },
+    "uv_sync": {
+      "command": [
+        "uv",
+        "sync",
+        "--frozen",
+        "--all-extras",
+        "--group",
+        "dev"
+      ],
+      "returncode": 0,
+      "seconds": 0.10231333199772052,
+      "stderr": "Checked 90 packages in 12ms\n",
+      "stdout": ""
+    }
+  },
+  "gitleaks": {
+    "command": "docker run --rm -v \"$PWD:/repo\" zricethezav/gitleaks:v8.24.3 detect --source=/repo --no-banner --redact --exit-code=1",
+    "reason": "Docker daemon unavailable: cannot connect to unix:///Users/Mitesh Gada/.docker/run/docker.sock",
+    "status": "not_executed"
+  },
+  "ollama_runtime": {
+    "binary": "/usr/local/bin/ollama",
+    "reason": "127.0.0.1:11434 refused connection",
+    "status": "not_executed"
+  }
+}

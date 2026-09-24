@@ -1,0 +1,205 @@
+{
+  "benchmark_version": "1",
+  "browser_e2e": {
+    "command": [
+      "npm",
+      "--prefix",
+      "frontend",
+      "run",
+      "test:e2e"
+    ],
+    "returncode": 0,
+    "seconds": 27.40806159899512,
+    "stderr": "(node:71493) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.\n(Use `node --trace-warnings ...` to show where the warning was created)\n(node:71493) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.\n(Use `node --trace-warnings ...` to show where the warning was created)\n",
+    "stdout": "\n> audit-analytics-frontend@1.0.0 test:e2e\n> playwright test\n\n\nRunning 1 test using 1 worker\n\n  \u2713  1 e2e/workbench.spec.ts:6:1 \u203a complete persisted workbench workflow at desktop and mobile (8.0s)\n\n  1 passed (23.4s)\n"
+  },
+  "browser_e2e_clean_recheck": {
+    "browser": "approved external Chromium 1124",
+    "returncode": 0,
+    "seconds": 31.2,
+    "tests": 1
+  },
+  "clean_rebuild": {
+    "compileall": "passed",
+    "pytest": "38 passed, 1 warning, 3 subtests passed",
+    "pytest_seconds": 21.48,
+    "uv_sync": "passed",
+    "venv_removed": true
+  },
+  "environment": {
+    "commit": "0dd6fda07abd028018514221ccbb592deb0b6842",
+    "cpu_count": 4,
+    "fastapi": "0.141.1",
+    "frontend_lock_sha256": "b37fe514b9aa2e4f5571fcdca611c7bc01e5b28d46688423e73dc8ef79574c95",
+    "machine": "x86_64",
+    "node": "v22.23.2",
+    "npm": "10.9.8",
+    "numpy": "2.2.6",
+    "ollama_binary": "/usr/local/bin/ollama",
+    "ollama_probe": "connection refused on 127.0.0.1:11434",
+    "os": "macOS-12.7.6-x86_64-i386-64bit",
+    "processor": "i386",
+    "python": "3.10.17 (main, Apr  9 2025, 04:05:58) [Clang 20.1.0 ]",
+    "python3": "Python 3.10.17",
+    "ram_bytes": 8589934592,
+    "sqlite": "3.47.1",
+    "status": "## main...origin/main\n M AGENTS.md\n?? .DS_Store\n?? .monid/\n?? benchmark-results/\n?? docs/BENCHMARKING.md\n?? scripts/run_benchmark.py",
+    "system_python3": "Python 3.12.10",
+    "uv": "uv 0.12.16 (761ff1379 2026-09-17 x86_64-apple-darwin)",
+    "uv_lock_sha256": "839877d5727602dbb8a207dca33ff26ebb60f6e2a99c4b53cd7de10a92b8a4b7"
+  },
+  "gitleaks": {
+    "reason": "Docker daemon unavailable; no local gitleaks binary",
+    "status": "not_executed"
+  },
+  "package_build": {
+    "artifacts": [
+      "dist/audit_analytics-1.0.0-py3-none-any.whl",
+      "dist/audit_analytics-1.0.0.tar.gz"
+    ],
+    "twine_check": "passed",
+    "uv_build": "passed"
+  },
+  "seed": 20260924,
+  "test_suite": {
+    "compileall": {
+      "command": [
+        "uv",
+        "run",
+        "python",
+        "-m",
+        "compileall",
+        "-q",
+        "src",
+        "run.py"
+      ],
+      "returncode": 0,
+      "seconds": 0.26413132800371386,
+      "stderr": "",
+      "stdout": ""
+    },
+    "frontend_audit": {
+      "command": [
+        "npm",
+        "--prefix",
+        "frontend",
+        "audit",
+        "--audit-level=high"
+      ],
+      "returncode": 0,
+      "seconds": 3.6173822160053533,
+      "stderr": "",
+      "stdout": "found 0 vulnerabilities\n"
+    },
+    "frontend_build": {
+      "command": [
+        "npm",
+        "--prefix",
+        "frontend",
+        "run",
+        "build"
+      ],
+      "returncode": 0,
+      "seconds": 11.924124003009638,
+      "stderr": "",
+      "stdout": "\n> audit-analytics-frontend@1.0.0 build\n> npm run typecheck && vite build\n\n\n> audit-analytics-frontend@1.0.0 typecheck\n> tsc --noEmit\n\nvite v8.3.0 building client environment for production...\ntransforming...\n\u2713 24 modules transformed.\nrendering chunks...\ncomputing gzip size...\n../src/audit_analytics/static/index.html                   0.44 kB \u2502 gzip:  0.32 kB\n../src/audit_analytics/static/assets/index-BnB1cnOE.css   16.92 kB \u2502 gzip:  4.25 kB\n../src/audit_analytics/static/assets/index-C6pPJgXd.js   183.19 kB \u2502 gzip: 55.63 kB\n\n\u2713 built in 1.17s\n"
+    },
+    "frontend_ci": {
+      "command": [
+        "npm",
+        "--prefix",
+        "frontend",
+        "ci",
+        "--ignore-scripts"
+      ],
+      "returncode": 0,
+      "seconds": 7.868406323003001,
+      "stderr": "",
+      "stdout": "\nadded 59 packages, and audited 60 packages in 7s\n\n17 packages are looking for funding\n  run `npm fund` for details\n\nfound 0 vulnerabilities\n"
+    },
+    "frontend_typecheck": {
+      "command": [
+        "npm",
+        "--prefix",
+        "frontend",
+        "run",
+        "typecheck"
+      ],
+      "returncode": 0,
+      "seconds": 9.324624873988796,
+      "stderr": "",
+      "stdout": "\n> audit-analytics-frontend@1.0.0 typecheck\n> tsc --noEmit\n\n"
+    },
+    "license_policy": {
+      "command": [
+        "python3",
+        "scripts/check_licenses.py"
+      ],
+      "returncode": 0,
+      "seconds": 0.10611678000714164,
+      "stderr": "",
+      "stdout": "Frontend license metadata policy passed.\n"
+    },
+    "pip_audit": {
+      "command": [
+        "uv",
+        "run",
+        "pip-audit",
+        "--local"
+      ],
+      "returncode": 0,
+      "seconds": 23.649276746000396,
+      "stderr": "No known vulnerabilities found\n",
+      "stdout": "Name            Skip Reason\n--------------- ------------------------------------------------------------------------------\naudit-analytics Dependency not found on PyPI and could not be audited: audit-analytics (1.0.0)\n"
+    },
+    "pytest": {
+      "command": [
+        "uv",
+        "run",
+        "pytest",
+        "-q",
+        "-p",
+        "no:cacheprovider"
+      ],
+      "returncode": 0,
+      "seconds": 23.48416604900558,
+      "stderr": "",
+      "stdout": "......................................                                [100%]\n=============================== warnings summary ===============================\n.venv/lib/python3.10/site-packages/fastapi/testclient.py:1\n  /Users/Mitesh Gada/Documents/Projects/audit-analytics/.venv/lib/python3.10/site-packages/fastapi/testclient.py:1: StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.\n    from starlette.testclient import TestClient as TestClient  # noqa\n\n-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html\n38 passed, 1 warning, 3 subtests passed in 21.01s\n"
+    },
+    "repo_policy": {
+      "command": [
+        "python3",
+        "scripts/check_repo.py"
+      ],
+      "returncode": 0,
+      "seconds": 0.3704235780023737,
+      "stderr": "",
+      "stdout": "Repository policy passed for 99 tracked files.\n"
+    },
+    "uv_lock_check": {
+      "command": [
+        "uv",
+        "lock",
+        "--check"
+      ],
+      "returncode": 0,
+      "seconds": 0.09537602600175887,
+      "stderr": "Resolved 100 packages in 13ms\n",
+      "stdout": ""
+    },
+    "uv_sync": {
+      "command": [
+        "uv",
+        "sync",
+        "--frozen",
+        "--all-extras",
+        "--group",
+        "dev"
+      ],
+      "returncode": 0,
+      "seconds": 0.10231333199772052,
+      "stderr": "Checked 90 packages in 12ms\n",
+      "stdout": ""
+    }
+  }
+}

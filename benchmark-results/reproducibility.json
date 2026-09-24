@@ -1,0 +1,8 @@
+{
+  "manifest_core": true,
+  "normalized_ledger": true,
+  "risk_results": true,
+  "sample_selection": true,
+  "timestamps_and_run_ids_excluded": true,
+  "workpaper_rows": true
+}

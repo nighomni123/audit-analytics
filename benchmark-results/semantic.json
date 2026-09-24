@@ -1,0 +1,245 @@
+{
+  "approximation": {
+    "results": [
+      {
+        "candidate_recall_at": {
+          "1": 0.0,
+          "10": 0.09970000000000012,
+          "5": 0.06740000000000042
+        },
+        "evaluated": 1000,
+        "size": 1000,
+        "timing": {
+          "peak_python_bytes": 11045087,
+          "seconds": 73.14761537000595
+        }
+      }
+    ],
+    "seed": 20260924
+  },
+  "semantic": {
+    "cache": {
+      "changed_digest": {
+        "cached": 0,
+        "embedded": 25
+      },
+      "first": {
+        "cached": 0,
+        "embedded": 25
+      },
+      "modified": {
+        "cached": 24,
+        "embedded": 1
+      },
+      "second": {
+        "cached": 25,
+        "embedded": 0
+      }
+    },
+    "cluster_purity": 0.7222222222222222,
+    "fixture_sha256": "78ea80b3f66a43d2b848e33b0d7ea0fec28ec335857122ce757fb8cb997618ec",
+    "ollama": "not available; fixed offline vectors only",
+    "profile": {
+      "cluster_count": 2,
+      "cluster_sizes": [
+        17,
+        8
+      ],
+      "coverage": 0.9615384615384616,
+      "retrieval": {
+        "candidate_limit": 64,
+        "exhaustive": false,
+        "method": "deterministic_bounded_candidates",
+        "peer_limit": 5,
+        "tie_break": "score_desc_then_ledger_id",
+        "training_limit": 512
+      },
+      "run_id": 1,
+      "status": "complete"
+    },
+    "retrieval": {
+      "max": {
+        "examples": {
+          "both": [
+            {
+              "expected": [
+                "R2",
+                "R3"
+              ],
+              "semantic_top3": [
+                "R2",
+                "R3",
+                "A1"
+              ],
+              "target": "R1",
+              "token_top3": [
+                "R2",
+                "R3",
+                "R4"
+              ]
+            },
+            {
+              "expected": [
+                "R1",
+                "R3"
+              ],
+              "semantic_top3": [
+                "R1",
+                "R3",
+                "A1"
+              ],
+              "target": "R2",
+              "token_top3": [
+                "R1",
+                "R3",
+                "R4"
+              ]
+            },
+            {
+              "expected": [
+                "R1",
+                "R2"
+              ],
+              "semantic_top3": [
+                "R1",
+                "R2",
+                "A1"
+              ],
+              "target": "R3",
+              "token_top3": [
+                "R1",
+                "R2",
+                "R4"
+              ]
+            },
+            {
+              "expected": [
+                "F2",
+                "F3"
+              ],
+              "semantic_top3": [
+                "F2",
+                "F3",
+                "G1"
+              ],
+              "target": "F1",
+              "token_top3": [
+                "F3",
+                "F2",
+                "G1"
+              ]
+            },
+            {
+              "expected": [
+                "F1",
+                "F3"
+              ],
+              "semantic_top3": [
+                "F1",
+                "F3",
+                "G1"
+              ],
+              "target": "F2",
+              "token_top3": [
+                "F1",
+                "F3",
+                "G1"
+              ]
+            }
+          ],
+          "both_fail": [
+            {
+              "expected": [
+                "C1"
+              ],
+              "semantic_top3": [
+                "O1"
+              ],
+              "target": "N1",
+              "token_top3": [
+                "O1"
+              ]
+            }
+          ],
+          "semantic_only": [
+            {
+              "expected": [
+                "F1",
+                "F2",
+                "F3"
+              ],
+              "semantic_top3": [
+                "F1",
+                "F2",
+                "F3"
+              ],
+              "target": "A1",
+              "token_top3": [
+                "V1"
+              ]
+            },
+            {
+              "expected": [
+                "F1",
+                "F2",
+                "F3"
+              ],
+              "semantic_top3": [
+                "F1",
+                "F2",
+                "F3"
+              ],
+              "target": "V1",
+              "token_top3": [
+                "F6",
+                "A1",
+                "G1"
+              ]
+            }
+          ],
+          "token_only": []
+        },
+        "mrr": 0.8095238095238095,
+        "recall_at": {
+          "1": 0.35714285714285715,
+          "10": 1.0,
+          "3": 0.9285714285714286,
+          "5": 1.0
+        },
+        "targets": 14
+      },
+      "semantic": {
+        "examples": {
+          "both": [],
+          "both_fail": [],
+          "semantic_only": [],
+          "token_only": []
+        },
+        "mrr": 0.9285714285714286,
+        "recall_at": {
+          "1": 0.4642857142857143,
+          "10": 1.0,
+          "3": 1.0,
+          "5": 1.0
+        },
+        "targets": 14
+      },
+      "token": {
+        "examples": {
+          "both": [],
+          "both_fail": [],
+          "semantic_only": [],
+          "token_only": []
+        },
+        "mrr": 0.7321428571428571,
+        "recall_at": {
+          "1": 0.32142857142857145,
+          "10": 0.8928571428571429,
+          "3": 0.7857142857142857,
+          "5": 0.8571428571428571
+        },
+        "targets": 14
+      }
+    }
+  }
+}

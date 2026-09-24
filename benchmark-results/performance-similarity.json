@@ -1,0 +1,16 @@
+[
+  {
+    "entries": 50000,
+    "dimensions": 64,
+    "seconds": 8.582,
+    "peak_python_bytes": 199265704,
+    "results": 25
+  },
+  {
+    "entries": 100000,
+    "dimensions": 64,
+    "seconds": 17.286,
+    "peak_python_bytes": 397972340,
+    "results": 25
+  }
+]

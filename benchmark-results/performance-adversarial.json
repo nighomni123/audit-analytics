@@ -1,0 +1,10 @@
+{
+  "note": "Adversarial same-account/same-amount bucket exposes the reversal comparison ceiling. 10k completed after 433.606 seconds; larger analysis sizes were not attempted.",
+  "seed": 20260924,
+  "results": [
+    {"size": 1000, "same_account_amount_bucket": true, "exceptions": 0, "timing": {"seconds": 3.1436122990126023, "peak_python_bytes": 1915340}},
+    {"size": 2000, "same_account_amount_bucket": true, "exceptions": 0, "timing": {"seconds": 12.769999165000627, "peak_python_bytes": 3719460}},
+    {"size": 5000, "same_account_amount_bucket": true, "exceptions": 0, "timing": {"seconds": 65.04300709499512, "peak_python_bytes": 9300128}},
+    {"size": 10000, "same_account_amount_bucket": true, "exceptions": 0, "timing": {"seconds": 433.60576256000786, "peak_python_bytes": 18945736}}
+  ]
+}

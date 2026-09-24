@@ -1,0 +1,479 @@
+{
+  "adversarial_analysis": {
+    "note": "Adversarial same-account/same-amount bucket exposes the reversal comparison ceiling. 10k completed after 433.606 seconds; larger analysis sizes were not attempted.",
+    "results": [
+      {
+        "exceptions": 0,
+        "same_account_amount_bucket": true,
+        "size": 1000,
+        "timing": {
+          "peak_python_bytes": 1915340,
+          "seconds": 3.1436122990126023
+        }
+      },
+      {
+        "exceptions": 0,
+        "same_account_amount_bucket": true,
+        "size": 2000,
+        "timing": {
+          "peak_python_bytes": 3719460,
+          "seconds": 12.769999165000627
+        }
+      },
+      {
+        "exceptions": 0,
+        "same_account_amount_bucket": true,
+        "size": 5000,
+        "timing": {
+          "peak_python_bytes": 9300128,
+          "seconds": 65.04300709499512
+        }
+      },
+      {
+        "exceptions": 0,
+        "same_account_amount_bucket": true,
+        "size": 10000,
+        "timing": {
+          "peak_python_bytes": 18945736,
+          "seconds": 433.60576256000786
+        }
+      }
+    ],
+    "seed": 20260924
+  },
+  "api_latency": {
+    "results": [
+      {
+        "latency": {
+          "exceptions": {
+            "p50_seconds": 0.025110926500929054,
+            "p95_seconds": 0.03359371199621819,
+            "samples": [
+              0.02510665300360415,
+              0.03956730299978517,
+              0.02503364499716554,
+              0.025115199998253956,
+              0.02105684699199628,
+              0.024089526996249333,
+              0.03359371199621819,
+              0.025828672994975932,
+              0.021504721997189336,
+              0.025458906005951576
+            ],
+            "statuses": [
+              200,
+              200,
+              200,
+              200,
+              200,
+              200,
+              200,
+              200,
+              200,
+              200
+            ]
+          },
+          "similar": {
+            "p50_seconds": 0.07763059399439953,
+            "p95_seconds": 0.09360343500156887,
+            "samples": [
+              0.07372652800404467,
+              0.09151704898977187,
+              0.06711131799966097,
+              0.07597390499722678,
+              0.0620810899999924,
+              0.09360343500156887,
+              0.09314463299233466,
+              0.12470631800533738,
+              0.06437511499098036,
+              0.07928728299157228
+            ],
+            "statuses": [
+              200,
+              200,
+              200,
+              200,
+              200,
+              200,
+              200,
+              200,
+              200,
+              200
+            ]
+          },
+          "status": {
+            "p50_seconds": 0.015423055992869195,
+            "p95_seconds": 0.021518765002838336,
+            "samples": [
+              0.042067431000759825,
+              0.014208857013727538,
+              0.01343030900170561,
+              0.01220401500177104,
+              0.015741104987682775,
+              0.015105006998055615,
+              0.021518765002838336,
+              0.01735235699743498,
+              0.014984089997597039,
+              0.016029131002142094
+            ],
+            "statuses": [
+              200,
+              200,
+              200,
+              200,
+              200,
+              200,
+              200,
+              200,
+              200,
+              200
+            ]
+          }
+        },
+        "size": 1000
+      },
+      {
+        "latency": {
+          "exceptions": {
+            "p50_seconds": 0.041847261498332955,
+            "p95_seconds": 0.051564243010943756,
+            "samples": [
+              0.04215080999711063,
+              0.051564243010943756,
+              0.043115956999827176,
+              0.039933128995471634,
+              0.039605122001376,
+              0.040180601994507015,
+              0.04154371299955528,
+              0.039904937002575025,
+              0.05673822700919118,
+              0.045334041002206504
+            ],
+            "statuses": [
+              200,
+              200,
+              200,
+              200,
+              200,
+              200,
+              200,
+              200,
+              200,
+              200
+            ]
+          },
+          "similar": {
+            "p50_seconds": 0.5322629325019079,
+            "p95_seconds": 0.573892842992791,
+            "samples": [
+              0.6064108449936612,
+              0.5376544530008687,
+              0.5042078710102942,
+              0.45011110600898974,
+              0.5268714120029472,
+              0.48909128599916585,
+              0.5458620790013811,
+              0.4669799370021792,
+              0.573892842992791,
+              0.5545220570056699
+            ],
+            "statuses": [
+              200,
+              200,
+              200,
+              200,
+              200,
+              200,
+              200,
+              200,
+              200,
+              200
+            ]
+          },
+          "status": {
+            "p50_seconds": 0.03498842399858404,
+            "p95_seconds": 0.03621426099562086,
+            "samples": [
+              0.03535851299238857,
+              0.03621426099562086,
+              0.03319320500304457,
+              0.032634065006277524,
+              0.034117195988073945,
+              0.03461833500477951,
+              0.03252629800408613,
+              0.03599381500680465,
+              0.0359812509996118,
+              0.03753461901214905
+            ],
+            "statuses": [
+              200,
+              200,
+              200,
+              200,
+              200,
+              200,
+              200,
+              200,
+              200,
+              200
+            ]
+          }
+        },
+        "size": 10000
+      }
+    ],
+    "seed": 20260924
+  },
+  "imports": {
+    "results": [
+      {
+        "accepted": 100,
+        "control_credits": 0.0,
+        "control_debits": 16400.289999999997,
+        "dataset": {
+          "control_credits": 0.0,
+          "control_debits": 16400.29,
+          "path": "/var/folders/10/cqltzsxs7fx1x4yzs5lszsxr0000gn/T/benchmark-import-100-swfmtg_1/gl.csv",
+          "seed": 20260924,
+          "sha256": "68ca4e127da580ab498a7a670e660b093bcb9e9eafe1a1ccb72073960ccdd770",
+          "size": 100
+        },
+        "db_bytes": 4096,
+        "import_id": 1,
+        "rejected": 0,
+        "rows_per_second": 416.66833333854316,
+        "size": 100,
+        "timing": {
+          "peak_python_bytes": 1061652,
+          "seconds": 0.23999904000083916
+        }
+      },
+      {
+        "accepted": 1000,
+        "control_credits": 0.0,
+        "control_debits": 164558.05,
+        "dataset": {
+          "control_credits": 0.0,
+          "control_debits": 164558.05,
+          "path": "/var/folders/10/cqltzsxs7fx1x4yzs5lszsxr0000gn/T/benchmark-import-1000-9kq7jm_u/gl.csv",
+          "seed": 20260924,
+          "sha256": "2f92f3454b5b8c42db876b5a65b6afbe366df8737493d40ec42e254fede1fd50",
+          "size": 1000
+        },
+        "db_bytes": 4096,
+        "import_id": 1,
+        "rejected": 0,
+        "rows_per_second": 889.2675097507087,
+        "size": 1000,
+        "timing": {
+          "peak_python_bytes": 1128863,
+          "seconds": 1.1245210119959665
+        }
+      },
+      {
+        "accepted": 10000,
+        "control_credits": 0.0,
+        "control_debits": 1658816.7899999984,
+        "dataset": {
+          "control_credits": 0.0,
+          "control_debits": 1658816.79,
+          "path": "/var/folders/10/cqltzsxs7fx1x4yzs5lszsxr0000gn/T/benchmark-import-10000-ppgq4mdt/gl.csv",
+          "seed": 20260924,
+          "sha256": "dcc810efed8a3414695a050e3119cc2bfeab62c53d694d0f4d8fdeeed3876c26",
+          "size": 10000
+        },
+        "db_bytes": 4714496,
+        "import_id": 1,
+        "rejected": 0,
+        "rows_per_second": 780.3521501048083,
+        "size": 10000,
+        "timing": {
+          "peak_python_bytes": 1809963,
+          "seconds": 12.814727297998616
+        }
+      },
+      {
+        "accepted": 50000,
+        "control_credits": 0.0,
+        "control_debits": 8295194.700000004,
+        "dataset": {
+          "control_credits": 0.0,
+          "control_debits": 8295194.7,
+          "path": "/var/folders/10/cqltzsxs7fx1x4yzs5lszsxr0000gn/T/benchmark-import-50000-76_3nay4/gl.csv",
+          "seed": 20260924,
+          "sha256": "470506a6cad1dad84baef4381aa716e6bf12eb7863ab081c3d8176ce7a2f8adc",
+          "size": 50000
+        },
+        "db_bytes": 23506944,
+        "import_id": 1,
+        "rejected": 0,
+        "rows_per_second": 528.2928785926872,
+        "size": 50000,
+        "timing": {
+          "peak_python_bytes": 2102822,
+          "seconds": 94.64447094799834
+        }
+      },
+      {
+        "accepted": 100000,
+        "control_credits": 0.0,
+        "control_debits": 16593167.670000317,
+        "dataset": {
+          "control_credits": 0.0,
+          "control_debits": 16593167.67,
+          "path": "/var/folders/10/cqltzsxs7fx1x4yzs5lszsxr0000gn/T/benchmark-import-100000-al3mxzc_/gl.csv",
+          "seed": 20260924,
+          "sha256": "aedcc160bf75f2e8131e591d6c126ccc52d48bac9b2bdd8f7be365adc2a5c4c9",
+          "size": 100000
+        },
+        "db_bytes": 47132672,
+        "import_id": 1,
+        "rejected": 0,
+        "rows_per_second": 890.4647724482473,
+        "size": 100000,
+        "timing": {
+          "peak_python_bytes": 2102823,
+          "seconds": 112.30090520600788
+        }
+      }
+    ],
+    "seed": 20260924
+  },
+  "pipeline": {
+    "results": [
+      {
+        "analysis": {
+          "exceptions": 1000,
+          "isolation_timing": {
+            "peak_python_bytes": 2572842,
+            "seconds": 0.3677637239889009
+          },
+          "run": 1,
+          "timing": {
+            "peak_python_bytes": 2454262,
+            "seconds": 0.26702624799509067
+          }
+        },
+        "api_requests": [
+          {
+            "path": "/api/status",
+            "seconds": 0.019137313007377088,
+            "status": 200
+          },
+          {
+            "path": "/api/exceptions?limit=25",
+            "seconds": 0.028447641001548618,
+            "status": 200
+          },
+          {
+            "path": "/api/similar?q=routine%20synthetic",
+            "seconds": 0.06709020800190046,
+            "status": 200
+          }
+        ],
+        "dataset": {
+          "control_credits": 0.0,
+          "control_debits": 164558.05,
+          "path": "/var/folders/10/cqltzsxs7fx1x4yzs5lszsxr0000gn/T/benchmark-pipeline-1000-k5250vaa/gl.csv",
+          "seed": 20260924,
+          "sha256": "2f92f3454b5b8c42db876b5a65b6afbe366df8737493d40ec42e254fede1fd50",
+          "size": 1000
+        },
+        "db_bytes": 4096,
+        "export": {
+          "rows": 1000,
+          "timing": {
+            "peak_python_bytes": 1964686,
+            "seconds": 0.12582967500202358
+          }
+        },
+        "import": {
+          "accepted": 1000,
+          "rejected": 0,
+          "timing": {
+            "peak_python_bytes": 1128865,
+            "seconds": 0.8298054539918667
+          }
+        },
+        "report": {
+          "timing": {
+            "peak_python_bytes": 28346,
+            "seconds": 0.00466546299867332
+          }
+        },
+        "sampling": {
+          "count": 10,
+          "sample_id": 1
+        },
+        "size": 1000
+      },
+      {
+        "analysis": {
+          "exceptions": 10000,
+          "isolation_timing": {
+            "peak_python_bytes": 26872948,
+            "seconds": 23.88391309599683
+          },
+          "run": 1,
+          "timing": {
+            "peak_python_bytes": 23624492,
+            "seconds": 15.418656329988153
+          }
+        },
+        "api_requests": [
+          {
+            "path": "/api/status",
+            "seconds": 0.04111558900331147,
+            "status": 200
+          },
+          {
+            "path": "/api/exceptions?limit=25",
+            "seconds": 0.04446760899736546,
+            "status": 200
+          },
+          {
+            "path": "/api/similar?q=routine%20synthetic",
+            "seconds": 0.5280789050011663,
+            "status": 200
+          }
+        ],
+        "dataset": {
+          "control_credits": 0.0,
+          "control_debits": 1658816.79,
+          "path": "/var/folders/10/cqltzsxs7fx1x4yzs5lszsxr0000gn/T/benchmark-pipeline-10000-a52m394u/gl.csv",
+          "seed": 20260924,
+          "sha256": "dcc810efed8a3414695a050e3119cc2bfeab62c53d694d0f4d8fdeeed3876c26",
+          "size": 10000
+        },
+        "db_bytes": 9809920,
+        "export": {
+          "rows": 10000,
+          "timing": {
+            "peak_python_bytes": 18423223,
+            "seconds": 1.0895146409893641
+          }
+        },
+        "import": {
+          "accepted": 10000,
+          "rejected": 0,
+          "timing": {
+            "peak_python_bytes": 1809965,
+            "seconds": 9.44660802600265
+          }
+        },
+        "report": {
+          "timing": {
+            "peak_python_bytes": 27258,
+            "seconds": 0.01837222700123675
+          }
+        },
+        "sampling": {
+          "count": 10,
+          "sample_id": 1
+        },
+        "size": 10000
+      }
+    ],
+    "seed": 20260924
+  }
+}

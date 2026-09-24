@@ -1,0 +1,24 @@
+{
+  "tested_commit": "0dd6fda07abd028018514221ccbb592deb0b6842",
+  "failures": [
+    {"id": "BENCH-001", "classification": "BUG", "area": "deterministic fiscal period", "summary": "Preceding days inside the configured fiscal window are not detected.", "evidence": "correctness.json:deterministic.detectors[fiscal_period_end]", "impact": "Period-end coverage is incomplete."},
+    {"id": "BENCH-002", "classification": "CONTROL FAILURE", "area": "missing data", "summary": "Missing preparer can produce rare_account_preparer_pair and a positive risk score.", "evidence": "correctness.json:missing_data.rates[1]", "impact": "Missingness can increase rather than reduce analytical concern."},
+    {"id": "BENCH-003", "classification": "CONTROL FAILURE", "area": "direct database tampering", "summary": "Direct severity mutation is allowed while status/history are protected.", "evidence": "governance.json:governance.direct_severity_mutation", "impact": "A local DB writer can bypass high-severity second-review governance."},
+    {"id": "BENCH-004", "classification": "BUG", "area": "import validation", "summary": "Neither debit nor credit nor amount is accepted as a zero-value row; explicit zero is also accepted.", "evidence": "correctness.json:malformed_import", "impact": "Policy for zero/empty financial lines is not enforced or documented consistently."},
+    {"id": "BENCH-005", "classification": "DOCUMENTATION MISMATCH", "area": "ground truth", "summary": "Ground truth has six rows while README says five; benford_vendor is not a per-entry detector and one additional miss is undocumented.", "evidence": "correctness.json:ground_truth", "impact": "Users can overstate validation coverage."},
+    {"id": "BENCH-006", "classification": "API CONTRACT GAP", "area": "errors", "summary": "Missing reconciliation import returns 400 while other missing objects generally return 404.", "evidence": "governance.json:api_endpoint_matrix", "impact": "Clients need endpoint-specific error handling."},
+    {"id": "BENCH-007", "classification": "PERFORMANCE LIMITATION", "area": "deterministic analysis", "summary": "Same-account/same-amount reversal buckets scale quadratically; 10k took 433.61s.", "evidence": "performance-adversarial.json", "impact": "250k/500k end-to-end analysis is unsafe on the measured host."},
+    {"id": "BENCH-008", "classification": "PERFORMANCE LIMITATION", "area": "similarity", "summary": "Similarity is a full dense in-memory scan; 100k/64-dim took 17.29s and 398 MB.", "evidence": "performance-similarity.json", "impact": "Real embedding dimensions and concurrent requests can exhaust local memory/latency budgets."},
+    {"id": "BENCH-009", "classification": "ANALYTICAL LIMITATION", "area": "semantic retrieval", "summary": "Bounded candidate recall was 0/0.0674/0.0997 at 1/5/10 on a 1k fixed-vector population.", "evidence": "semantic.json:approximation", "impact": "Semantic profile metrics may omit true nearest neighbors."},
+    {"id": "BENCH-010", "classification": "ANALYTICAL LIMITATION", "area": "semantic fusion", "summary": "Max fusion did not uniformly beat semantic-only ranking on the fixed fixture.", "evidence": "semantic.json:retrieval", "impact": "The max policy is transparent but not demonstrably optimal."},
+    {"id": "BENCH-011", "classification": "ENVIRONMENTAL LIMITATION", "area": "model runtime", "summary": "Ollama service was unavailable, so live model quality/provenance/latency was not measured.", "evidence": "baseline.json:environment.ollama_probe", "impact": "No real embedding model claim is supported."},
+    {"id": "BENCH-012", "classification": "ENVIRONMENTAL LIMITATION", "area": "secret scan", "summary": "Gitleaks could not run because the local Docker daemon was unavailable.", "evidence": "security.json:gitleaks", "impact": "Secret scanning is not demonstrated locally."},
+    {"id": "BENCH-013", "classification": "TEST GAP", "area": "analytical validation", "summary": "No authorized real-population, model-quality, or cross-browser/accessibility benchmark was available.", "evidence": "baseline.json and summary.md", "impact": "Laboratory synthetic results cannot establish real audit effectiveness."}
+  ],
+  "intentional_deferments": [
+    "network/multi-user authentication and tenancy",
+    "formal model validation and promotion",
+    "ANN/vector database migration",
+    "firm-specific Excel/PDF workpaper formats and digital signatures"
+  ]
+}

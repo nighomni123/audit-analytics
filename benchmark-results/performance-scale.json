@@ -1,0 +1,52 @@
+{
+  "imports": {
+    "results": [
+      {
+        "accepted": 250000,
+        "control_credits": 0.0,
+        "control_debits": 41482593.69000029,
+        "dataset": {
+          "control_credits": 0.0,
+          "control_debits": 41482593.69,
+          "path": "/var/folders/10/cqltzsxs7fx1x4yzs5lszsxr0000gn/T/benchmark-import-250000-5dwou95l/gl.csv",
+          "seed": 20260924,
+          "sha256": "5fed0d8f1563656af3d575ccc945cae0f4331ac456b896eb87a5d55d842e8244",
+          "size": 250000
+        },
+        "db_bytes": 117956608,
+        "import_id": 1,
+        "rejected": 0,
+        "rows_per_second": 866.20453289235,
+        "size": 250000,
+        "timing": {
+          "peak_python_bytes": 2106815,
+          "seconds": 288.6154372400051
+        }
+      },
+      {
+        "accepted": 500000,
+        "control_credits": 0.0,
+        "control_debits": 82966507.77000105,
+        "dataset": {
+          "control_credits": 0.0,
+          "control_debits": 82966507.77,
+          "path": "/var/folders/10/cqltzsxs7fx1x4yzs5lszsxr0000gn/T/benchmark-import-500000-pykfuumw/gl.csv",
+          "seed": 20260924,
+          "sha256": "a82b3cd3f34e9d7821411fe99eddd9e2f91bb287f3f0159306fb40cdfb848d4b",
+          "size": 500000
+        },
+        "db_bytes": 235974656,
+        "import_id": 1,
+        "rejected": 0,
+        "rows_per_second": 628.5486885403774,
+        "size": 500000,
+        "timing": {
+          "peak_python_bytes": 2102823,
+          "seconds": 795.4833239110012
+        }
+      }
+    ],
+    "seed": 20260924
+  },
+  "note": "Import-only scale run; analysis intentionally not attempted for unsafe sizes."
+}
