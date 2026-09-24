@@ -116,10 +116,13 @@ Zero-cue entries: investigation shows `semantic_contribution: 0` with `component
 
 - Experimental layer, not validated audit evidence. No statistical validation performed.
 - Real-model quality (threshold calibration, false-positive control, temporal stability) requires labelled, authorised audit populations and governance sign-off — deferred.
+- The historical 1,000-entry fixed-vector approximation benchmark measured bounded candidate recall of 0.0000/0.0674/0.0997 at 1/5/10. This is candidate-generation loss, not a claim about a live model.
+- Ordinary similarity search is a full dense scan. The historical 100,000-entry, 64-dimension synthetic run took 17.29 seconds and approximately 398 MB peak Python memory. No ANN or paging result is implied.
+- Ollama was unavailable during the historical benchmark; live model digest, dimensions, latency, cache behaviour, and quality remain unmeasured.
 - Cluster labels (`Process 01`, etc.) are hints, not authoritative process names.
 - Vendor is the supplied identity string, not a resolved legal entity.
 - History is earlier months in the same engagement only.
-- No persistent replacement server for browser verification; no cross-browser or full accessibility audit completed.
+- No cross-browser or full accessibility audit completed.
 - Responsive layout fix (horizontal overflow from inline evidence JSON) applied in session but not fully preserved across `git checkout` restoration; should be reviewed/reapplied if needed.
 
 ## 10. Future roadmap (deferred phases)
