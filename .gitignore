@@ -13,6 +13,7 @@ exports/
 backups/
 
 # Local tooling / raw datasets — never commit
+.monid/
 .monid-xdg/
 data/
 
