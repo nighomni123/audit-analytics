@@ -211,6 +211,80 @@ one with `save-mapping` for reuse across engagements.
 
 The GUI binds to `localhost`; nothing uploads client data. **Run Demo** uses only the repository's synthetic fixture. See the [CLI / developer demo](#cli--developer-demo-synthetic-data-verified) for the current command-line equivalent.
 
+## Run the workbench locally
+
+### Recommended first run
+
+From the repository root:
+
+```sh
+cd audit-analytics
+uv sync --frozen --all-extras --group dev
+npm --prefix frontend ci
+npm --prefix frontend run build
+mkdir -p engagements/local
+uv run python run.py serve --db engagements/local/audit.db
+```
+
+Open [http://127.0.0.1:8788](http://127.0.0.1:8788), then choose **Run Demo** on
+the launch screen. The demo uses only the repository's synthetic fixture. Stop
+the server with `Ctrl+C`.
+
+If you already activated the virtual environment, use this equivalent form:
+
+```sh
+source .venv/bin/activate
+python3 run.py serve --db engagements/local/audit.db
+```
+
+### Create a real engagement
+
+You can create the workspace from the UI, or initialize a local database first:
+
+```sh
+mkdir -p engagements/acme
+uv run python run.py init \
+  --db engagements/acme/audit.db \
+  --client "Acme Ltd" \
+  --period 2025-04-01:2026-03-31 \
+  --owner manager
+
+uv run python run.py serve --db engagements/acme/audit.db
+```
+
+Open `http://127.0.0.1:8788` and add the client ledger from **Population**. The
+workbench supports CSV and ordinary first-sheet XLSX exports; the original file
+is preserved as local evidence.
+
+### Frontend development mode
+
+Run the API and Vite dev server in separate terminals for hot reload.
+
+Terminal 1:
+
+```sh
+uv run python run.py serve --db engagements/local/audit.db
+```
+
+Terminal 2:
+
+```sh
+npm --prefix frontend run dev
+```
+
+Open [http://127.0.0.1:5173](http://127.0.0.1:5173). Vite proxies `/api` requests
+to port `8788`.
+
+### Local-first notes
+
+- The engagement database, preserved evidence, exports, and optional local model
+  context remain in the selected local workspace.
+- No cloud AI service is required for core analysis.
+- After changing frontend source, rerun `npm --prefix frontend run build` before
+  serving the production bundle.
+- If port `8788` is busy, start with `--port 8790` and open
+  `http://127.0.0.1:8790`.
+
 ## Step-by-step: first engagement
 
 This guide creates a separate local database for one client and one audit
