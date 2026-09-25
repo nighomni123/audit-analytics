@@ -64,6 +64,79 @@ Auditor action: investigates supporting evidence
 | **Investigation** | Auditor examination of a selected journal entry |
 | **Disposition** | Auditor's recorded review outcome |
 
+## Usage guide (start here)
+
+Use this as the shortest path from fresh clone to first review. Detailed
+workflow notes remain in [Step-by-step: first engagement](#step-by-step-first-engagement),
+[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md), [docs/OPERATIONS.md](docs/OPERATIONS.md),
+and [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md).
+
+### 1) Prerequisites and install
+
+- Python 3.10+
+- Node 22.12+
+
+```sh
+cd audit-analytics
+uv sync --frozen --all-extras --group dev
+source .venv/bin/activate
+npm --prefix frontend ci
+npm --prefix frontend run build
+```
+
+### 2) Synthetic demo (`examples/demo-journal-entries.csv`)
+
+Run the verified sequence in [CLI / developer demo](#cli--developer-demo-synthetic-data-verified)
+using `examples/demo-journal-entries.csv`:
+`init` → `import-gl` → `acknowledge-population` → `analyze` → `report`.
+
+Start the local review UI:
+
+```sh
+python3 run.py serve --db demo-engagement.db
+```
+
+Open `http://127.0.0.1:8788`.
+
+### 3) Real engagement flow (command order)
+
+1. `init` engagement database
+2. `preview-gl` incoming file
+3. Optional mapping: `preview-gl --mapping ...` and `save-mapping`
+4. Import sources: `import-coa` then `import-gl`
+5. Reconcile totals (`status`) and reviewer `acknowledge-population`
+6. Set methodology with `configure`
+7. Run analytics with `analyze`
+8. Review and disposition with UI or `assign`/`review`
+9. Build testing sample with `create-sample`
+10. Deliver outputs with `export` and `report`
+
+### 4) Optional local Ollama semantic search
+
+```sh
+ollama serve
+ollama pull embeddinggemma
+python3 run.py embed-ledger --db engagements/example-ltd-fy26/audit.db --model embeddinggemma
+python3 run.py similar --db engagements/example-ltd-fy26/audit.db --query "GST liability provision" --limit 25
+```
+
+### 5) Tests
+
+```sh
+uv run pytest -q
+npm --prefix frontend run typecheck
+npm --prefix frontend run build
+# optional browser coverage
+npm --prefix frontend run test:e2e
+```
+
+### 6) Important boundary
+
+This repository is a **local laboratory tool** for auditor review support. Risk
+cues are prioritisation signals, not fraud findings and not audit opinions. Keep
+engagement data local/private, and do not expose `serve` to a LAN/internet
+without additional firm-approved security controls.
+
 ## CLI / developer demo (synthetic data, verified)
 
 No client ledger? The repo ships a 400-row synthetic GL (`examples/`, generated
