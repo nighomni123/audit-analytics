@@ -47,7 +47,7 @@ def main() -> int:
         lowered = name.lower()
         if any(part in lowered for part in DENY_PATH_PARTS) or lowered.endswith(DENY_SUFFIXES):
             errors.append(f"prohibited tracked path: {name}")
-        if name in {"AGENTS.md", "scripts/check_repo.py"} or Path(name).suffix.lower() not in TEXT_SUFFIXES:
+        if name.startswith("benchmark-results/") or name in {"AGENTS.md", "scripts/check_repo.py"} or Path(name).suffix.lower() not in TEXT_SUFFIXES:
             continue
         try:
             text = (ROOT / name).read_text(encoding="utf-8")

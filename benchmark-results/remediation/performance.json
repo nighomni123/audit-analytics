@@ -1,0 +1,381 @@
+{
+  "adversarial_analysis": {
+    "note": "Adversarial same-account/same-amount bucket exposes the reversal comparison ceiling.",
+    "results": [
+      {
+        "exceptions": 0,
+        "same_account_amount_bucket": true,
+        "size": 1000,
+        "timing": {
+          "peak_python_bytes": 2086108,
+          "seconds": 0.08977298300305847
+        }
+      },
+      {
+        "exceptions": 0,
+        "same_account_amount_bucket": true,
+        "size": 2000,
+        "timing": {
+          "peak_python_bytes": 3879215,
+          "seconds": 0.22300756200274918
+        }
+      },
+      {
+        "exceptions": 0,
+        "same_account_amount_bucket": true,
+        "size": 5000,
+        "timing": {
+          "peak_python_bytes": 9498148,
+          "seconds": 0.5701712379959645
+        }
+      },
+      {
+        "exceptions": 0,
+        "same_account_amount_bucket": true,
+        "size": 10000,
+        "timing": {
+          "peak_python_bytes": 19087108,
+          "seconds": 0.9444148629991105
+        }
+      },
+      {
+        "exceptions": 0,
+        "same_account_amount_bucket": true,
+        "size": 20000,
+        "timing": {
+          "peak_python_bytes": 37749716,
+          "seconds": 3.8558766709902557
+        }
+      },
+      {
+        "exceptions": 0,
+        "same_account_amount_bucket": true,
+        "size": 50000,
+        "timing": {
+          "peak_python_bytes": 96774436,
+          "seconds": 15.685514797994983
+        }
+      }
+    ]
+  },
+  "api_latency": {
+    "results": [
+      {
+        "latency": {
+          "exceptions": {
+            "p50_seconds": 0.03333489549549995,
+            "p95_seconds": 0.041636513007688336,
+            "samples": [
+              0.03178436499729287,
+              0.041636513007688336,
+              0.038239493005676195,
+              0.04569846700178459,
+              0.033226004990865476,
+              0.034944632003316656,
+              0.033043815987184644,
+              0.03344378600013442,
+              0.02520802700018976,
+              0.026558669997029938
+            ],
+            "statuses": [
+              200,
+              200,
+              200,
+              200,
+              200,
+              200,
+              200,
+              200,
+              200,
+              200
+            ]
+          },
+          "similar": {
+            "p50_seconds": 0.12228829899686389,
+            "p95_seconds": 0.14314298798853997,
+            "samples": [
+              0.1863549849949777,
+              0.12168268200184684,
+              0.12521906499750912,
+              0.14314298798853997,
+              0.1251643589930609,
+              0.10112053999910131,
+              0.09484399799839593,
+              0.12289391599188093,
+              0.0852350320055848,
+              0.08096920000389218
+            ],
+            "statuses": [
+              200,
+              200,
+              200,
+              200,
+              200,
+              200,
+              200,
+              200,
+              200,
+              200
+            ]
+          },
+          "status": {
+            "p50_seconds": 0.02349587499338668,
+            "p95_seconds": 0.032076748000690714,
+            "samples": [
+              0.019267516006948426,
+              0.03733843399095349,
+              0.02367438899818808,
+              0.032076748000690714,
+              0.02904464201128576,
+              0.02331736098858528,
+              0.02773367500049062,
+              0.019693221998750232,
+              0.020694140999694355,
+              0.01750938899931498
+            ],
+            "statuses": [
+              200,
+              200,
+              200,
+              200,
+              200,
+              200,
+              200,
+              200,
+              200,
+              200
+            ]
+          }
+        },
+        "size": 1000
+      },
+      {
+        "latency": {
+          "exceptions": {
+            "p50_seconds": 0.0644954210074502,
+            "p95_seconds": 0.08251704600115772,
+            "samples": [
+              0.0822541910019936,
+              0.05962752099731006,
+              0.06390625600761268,
+              0.059388326000771485,
+              0.06508458600728773,
+              0.06324485999357421,
+              0.13428086999920197,
+              0.06833006700617261,
+              0.06279240699950606,
+              0.08251704600115772
+            ],
+            "statuses": [
+              200,
+              200,
+              200,
+              200,
+              200,
+              200,
+              200,
+              200,
+              200,
+              200
+            ]
+          },
+          "similar": {
+            "p50_seconds": 1.000634355499642,
+            "p95_seconds": 1.2158230700006243,
+            "samples": [
+              0.8024149000120815,
+              0.7711599229951389,
+              0.6892808600096032,
+              0.8708453750004992,
+              1.0172535099991364,
+              1.2158230700006243,
+              1.0608735330024501,
+              1.4265251619945047,
+              1.1351655010075774,
+              0.9840152010001475
+            ],
+            "statuses": [
+              200,
+              200,
+              200,
+              200,
+              200,
+              200,
+              200,
+              200,
+              200,
+              200
+            ]
+          },
+          "status": {
+            "p50_seconds": 0.054858879004314076,
+            "p95_seconds": 0.06767554000543896,
+            "samples": [
+              0.06266414299898315,
+              0.04634152300423011,
+              0.04572280799038708,
+              0.04865717000211589,
+              0.0493311580066802,
+              0.06440016599663068,
+              0.06767554000543896,
+              0.060386600001947954,
+              0.04835911399277393,
+              0.07601678700302728
+            ],
+            "statuses": [
+              200,
+              200,
+              200,
+              200,
+              200,
+              200,
+              200,
+              200,
+              200,
+              200
+            ]
+          }
+        },
+        "size": 10000
+      }
+    ],
+    "seed": 20260924
+  },
+  "pipeline": {
+    "results": [
+      {
+        "analysis": {
+          "exceptions": 1000,
+          "isolation_timing": {
+            "peak_python_bytes": 2483581,
+            "seconds": 0.4502205379976658
+          },
+          "run": 1,
+          "timing": {
+            "peak_python_bytes": 2487255,
+            "seconds": 0.2503485499910312
+          }
+        },
+        "api_requests": [
+          {
+            "path": "/api/status",
+            "seconds": 0.06888157500361558,
+            "status": 200
+          },
+          {
+            "path": "/api/exceptions?limit=25",
+            "seconds": 0.027380359009839594,
+            "status": 200
+          },
+          {
+            "path": "/api/similar?q=routine%20synthetic",
+            "seconds": 0.06645997900341172,
+            "status": 200
+          }
+        ],
+        "dataset": {
+          "control_credits": 0.0,
+          "control_debits": 164558.05,
+          "path": "/var/folders/10/cqltzsxs7fx1x4yzs5lszsxr0000gn/T/benchmark-pipeline-1000-b7xmi6i7/gl.csv",
+          "seed": 20260924,
+          "sha256": "2f92f3454b5b8c42db876b5a65b6afbe366df8737493d40ec42e254fede1fd50",
+          "size": 1000
+        },
+        "db_bytes": 4096,
+        "export": {
+          "rows": 1000,
+          "timing": {
+            "peak_python_bytes": 1971943,
+            "seconds": 0.10785344299802091
+          }
+        },
+        "import": {
+          "accepted": 1000,
+          "rejected": 0,
+          "timing": {
+            "peak_python_bytes": 1132865,
+            "seconds": 0.9081855880067451
+          }
+        },
+        "report": {
+          "timing": {
+            "peak_python_bytes": 29709,
+            "seconds": 0.004233235988067463
+          }
+        },
+        "sampling": {
+          "count": 10,
+          "sample_id": 1
+        },
+        "size": 1000
+      },
+      {
+        "analysis": {
+          "exceptions": 10000,
+          "isolation_timing": {
+            "peak_python_bytes": 26370556,
+            "seconds": 4.842466998001328
+          },
+          "run": 1,
+          "timing": {
+            "peak_python_bytes": 23310964,
+            "seconds": 4.450759814004414
+          }
+        },
+        "api_requests": [
+          {
+            "path": "/api/status",
+            "seconds": 0.05118394699820783,
+            "status": 200
+          },
+          {
+            "path": "/api/exceptions?limit=25",
+            "seconds": 0.06470112800889183,
+            "status": 200
+          },
+          {
+            "path": "/api/similar?q=routine%20synthetic",
+            "seconds": 0.6893426430033287,
+            "status": 200
+          }
+        ],
+        "dataset": {
+          "control_credits": 0.0,
+          "control_debits": 1658816.79,
+          "path": "/var/folders/10/cqltzsxs7fx1x4yzs5lszsxr0000gn/T/benchmark-pipeline-10000-hd6qtnll/gl.csv",
+          "seed": 20260924,
+          "sha256": "dcc810efed8a3414695a050e3119cc2bfeab62c53d694d0f4d8fdeeed3876c26",
+          "size": 10000
+        },
+        "db_bytes": 9809920,
+        "export": {
+          "rows": 10000,
+          "timing": {
+            "peak_python_bytes": 18423345,
+            "seconds": 1.9349115200020606
+          }
+        },
+        "import": {
+          "accepted": 10000,
+          "rejected": 0,
+          "timing": {
+            "peak_python_bytes": 1809965,
+            "seconds": 12.479676193004707
+          }
+        },
+        "report": {
+          "timing": {
+            "peak_python_bytes": 27685,
+            "seconds": 0.02779450500383973
+          }
+        },
+        "sampling": {
+          "count": 10,
+          "sample_id": 1
+        },
+        "size": 10000
+      }
+    ],
+    "seed": 20260924
+  }
+}

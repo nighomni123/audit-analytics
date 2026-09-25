@@ -36,6 +36,17 @@ PLAYWRIGHT_CHROMIUM=/approved/path/to/chromium \
   uv run python scripts/run_benchmark.py
 ```
 
+For remediation runs, preserve the historical directory and write a separate artifact set:
+
+```sh
+uv run python scripts/run_benchmark.py --output-dir benchmark-results/remediation \
+  --sizes 100,1000,10000 \
+  --pipeline-sizes 1000,10000 \
+  --adversarial-sizes 1000,2000,5000,10000,20000,50000 \
+  --api-latency-sizes 1000,10000 \
+  --approximation-sizes 1000,10000
+```
+
 Ollama-backed model measurements are not faked. If `http://127.0.0.1:11434/api/version` is unavailable, the artifact records the live semantic model benchmark as not executed; fixed-vector mechanics may still be measured separately.
 
 ## Scale and safety

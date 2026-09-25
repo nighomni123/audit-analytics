@@ -1,0 +1,67 @@
+{
+  "API contracts": {
+    "duration_seconds": 4.78,
+    "files": [
+      "tests/test_api_contracts.py",
+      "tests/test_smoke_e2e.py"
+    ],
+    "returncode": 0,
+    "summary": "5 passed, 1 warning in 3.44s"
+  },
+  "Operations": {
+    "duration_seconds": 1.09,
+    "files": [
+      "tests/test_operations.py"
+    ],
+    "returncode": 0,
+    "summary": "1 passed in 0.18s"
+  },
+  "Performance/reversal": {
+    "duration_seconds": 1.34,
+    "files": [
+      "tests/test_reversal_optimization.py",
+      "tests/test_remediation_semantics.py"
+    ],
+    "returncode": 0,
+    "summary": "5 passed in 0.52s"
+  },
+  "Python unit/integration": {
+    "duration_seconds": 2.74,
+    "files": [
+      "tests/test_reports_features.py",
+      "tests/test_materiality.py",
+      "tests/test_model_registry.py",
+      "tests/test_analytics_features.py",
+      "tests/test_bank.py",
+      "tests/test_import_idempotence.py",
+      "tests/test_pipeline.py",
+      "tests/test_connectors.py"
+    ],
+    "returncode": 0,
+    "summary": "14 passed in 1.93s"
+  },
+  "Semantic": {
+    "duration_seconds": 18.63,
+    "files": [
+      "tests/test_semantic.py",
+      "tests/test_semantic_risk_core.py",
+      "tests/test_semantic_evaluation.py",
+      "tests/test_semantic_integration.py",
+      "tests/test_remediation_semantic_contract.py"
+    ],
+    "returncode": 0,
+    "summary": "14 passed, 1 warning in 17.57s"
+  },
+  "Workflow/governance": {
+    "duration_seconds": 5.0,
+    "files": [
+      "tests/test_workflow.py",
+      "tests/test_remediation_governance.py",
+      "tests/test_cli_workflow.py",
+      "tests/test_engagement_workflow.py",
+      "tests/test_remediation_import_contract.py"
+    ],
+    "returncode": 0,
+    "summary": "8 passed, 7 subtests passed in 4.16s"
+  }
+}

@@ -1,0 +1,456 @@
+{
+  "api_endpoint_matrix": {
+    "cases": [
+      {
+        "error_code": null,
+        "label": "valid",
+        "method": "GET",
+        "path": "/api/health",
+        "status": 200
+      },
+      {
+        "error_code": null,
+        "label": "valid",
+        "method": "GET",
+        "path": "/api/status",
+        "status": 200
+      },
+      {
+        "error_code": null,
+        "label": "valid",
+        "method": "GET",
+        "path": "/api/engagement",
+        "status": 200
+      },
+      {
+        "error_code": "conflict",
+        "label": "duplicate",
+        "method": "POST",
+        "path": "/api/engagement",
+        "status": 409
+      },
+      {
+        "error_code": null,
+        "label": "valid",
+        "method": "GET",
+        "path": "/api/users",
+        "status": 200
+      },
+      {
+        "error_code": null,
+        "label": "valid",
+        "method": "POST",
+        "path": "/api/imports/preview",
+        "status": 200
+      },
+      {
+        "error_code": null,
+        "label": "valid",
+        "method": "POST",
+        "path": "/api/imports/gl",
+        "status": 200
+      },
+      {
+        "error_code": null,
+        "label": "valid",
+        "method": "GET",
+        "path": "/api/imports",
+        "status": 200
+      },
+      {
+        "error_code": null,
+        "label": "valid",
+        "method": "GET",
+        "path": "/api/imports/1/reconciliation",
+        "status": 200
+      },
+      {
+        "error_code": "not_found",
+        "label": "missing",
+        "method": "GET",
+        "path": "/api/imports/999/reconciliation",
+        "status": 404
+      },
+      {
+        "error_code": "conflict",
+        "label": "repeat",
+        "method": "POST",
+        "path": "/api/imports/acknowledge",
+        "status": 409
+      },
+      {
+        "error_code": null,
+        "label": "valid",
+        "method": "GET",
+        "path": "/api/config",
+        "status": 200
+      },
+      {
+        "error_code": null,
+        "label": "valid",
+        "method": "PUT",
+        "path": "/api/config",
+        "status": 200
+      },
+      {
+        "error_code": null,
+        "label": "valid",
+        "method": "GET",
+        "path": "/api/analysis-runs",
+        "status": 200
+      },
+      {
+        "error_code": null,
+        "label": "valid",
+        "method": "POST",
+        "path": "/api/analysis-runs",
+        "status": 200
+      },
+      {
+        "error_code": null,
+        "label": "valid",
+        "method": "GET",
+        "path": "/api/exceptions",
+        "status": 200
+      },
+      {
+        "error_code": "not_found",
+        "label": "missing",
+        "method": "GET",
+        "path": "/api/exceptions/999",
+        "status": 404
+      },
+      {
+        "error_code": null,
+        "label": "valid",
+        "method": "GET",
+        "path": "/api/exceptions/1",
+        "status": 200
+      },
+      {
+        "error_code": null,
+        "label": "valid",
+        "method": "POST",
+        "path": "/api/review",
+        "status": 200
+      },
+      {
+        "error_code": null,
+        "label": "valid",
+        "method": "GET",
+        "path": "/api/reviews",
+        "status": 200
+      },
+      {
+        "error_code": null,
+        "label": "valid",
+        "method": "POST",
+        "path": "/api/assignments",
+        "status": 200
+      },
+      {
+        "error_code": null,
+        "label": "valid",
+        "method": "GET",
+        "path": "/api/review-set",
+        "status": 200
+      },
+      {
+        "error_code": null,
+        "label": "valid",
+        "method": "POST",
+        "path": "/api/review-set/lock",
+        "status": 200
+      },
+      {
+        "error_code": null,
+        "label": "valid",
+        "method": "POST",
+        "path": "/api/review-set/reopen",
+        "status": 200
+      },
+      {
+        "error_code": null,
+        "label": "valid",
+        "method": "GET",
+        "path": "/api/similar?q=matrix",
+        "status": 200
+      },
+      {
+        "error_code": "not_found",
+        "label": "valid",
+        "method": "GET",
+        "path": "/api/semantic-profile",
+        "status": 404
+      },
+      {
+        "error_code": "not_found",
+        "label": "valid",
+        "method": "GET",
+        "path": "/api/semantic-investigation?run=1&ledger_id=1",
+        "status": 404
+      },
+      {
+        "error_code": null,
+        "label": "valid",
+        "method": "GET",
+        "path": "/api/mappings",
+        "status": 200
+      },
+      {
+        "error_code": null,
+        "label": "valid",
+        "method": "GET",
+        "path": "/api/compare-runs?a=1&b=1",
+        "status": 200
+      },
+      {
+        "error_code": null,
+        "label": "valid",
+        "method": "GET",
+        "path": "/api/models",
+        "status": 200
+      },
+      {
+        "error_code": null,
+        "label": "valid",
+        "method": "GET",
+        "path": "/api/bank",
+        "status": 200
+      },
+      {
+        "error_code": null,
+        "label": "valid",
+        "method": "GET",
+        "path": "/api/account-taxonomy",
+        "status": 200
+      },
+      {
+        "error_code": null,
+        "label": "valid",
+        "method": "POST",
+        "path": "/api/exports/package",
+        "status": 200
+      },
+      {
+        "error_code": "validation_error",
+        "label": "invalid_id",
+        "method": "GET",
+        "path": "/api/semantic-profile?run=0",
+        "status": 422
+      },
+      {
+        "error_code": "validation_error",
+        "label": "empty_query",
+        "method": "GET",
+        "path": "/api/similar?q=",
+        "status": 422
+      },
+      {
+        "error_code": "validation_error",
+        "label": "invalid_range",
+        "method": "PUT",
+        "path": "/api/config",
+        "status": 422
+      },
+      {
+        "error_code": "validation_error",
+        "label": "invalid",
+        "method": "POST",
+        "path": "/api/review",
+        "status": 422
+      }
+    ],
+    "count": 37
+  },
+  "api_security": {
+    "cors_header": null,
+    "create": 200,
+    "health": 200,
+    "invalid_review": {
+      "body": {
+        "error": {
+          "code": "validation_error",
+          "details": {
+            "fields": [
+              {
+                "ctx": {
+                  "gt": 0
+                },
+                "input": -1,
+                "loc": [
+                  "body",
+                  "id"
+                ],
+                "msg": "Input should be greater than 0",
+                "type": "greater_than"
+              },
+              {
+                "ctx": {
+                  "min_length": 1
+                },
+                "input": "",
+                "loc": [
+                  "body",
+                  "reviewer"
+                ],
+                "msg": "String should have at least 1 character",
+                "type": "string_too_short"
+              },
+              {
+                "ctx": {
+                  "expected": "'open', 'cleared', 'follow_up' or 'selected_for_testing'"
+                },
+                "input": "bad",
+                "loc": [
+                  "body",
+                  "disposition"
+                ],
+                "msg": "Input should be 'open', 'cleared', 'follow_up' or 'selected_for_testing'",
+                "type": "literal_error"
+              },
+              {
+                "ctx": {
+                  "min_length": 1
+                },
+                "input": "",
+                "loc": [
+                  "body",
+                  "note"
+                ],
+                "msg": "String should have at least 1 character",
+                "type": "string_too_short"
+              }
+            ]
+          },
+          "message": "request validation failed"
+        }
+      },
+      "status": 422
+    },
+    "long_filename": {
+      "body": {
+        "file": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx.csv",
+        "headers": [
+          "entry_id",
+          "posting_date",
+          "account_code",
+          "amount"
+        ],
+        "mapping": {
+          "account_code": "account_code",
+          "amount": "amount",
+          "credit": null,
+          "debit": null,
+          "description": null,
+          "document_date": null,
+          "entity": null,
+          "entry_id": "entry_id",
+          "is_manual": null,
+          "posting_date": "posting_date",
+          "preparer": null,
+          "reference": null,
+          "vendor": null
+        },
+        "missing_required": [],
+        "sample_rows": [
+          {
+            "account_code": "1",
+            "amount": "1",
+            "entry_id": "A",
+            "posting_date": "2025-01-01"
+          }
+        ]
+      },
+      "outside_artifacts": [],
+      "status": 200
+    },
+    "security_headers": {
+      "content-security-policy": "default-src 'self'; connect-src 'self'; img-src 'self' data:; style-src 'self'; script-src 'self'; object-src 'none'; base-uri 'self'; frame-ancestors 'none'",
+      "x-frame-options": "DENY",
+      "x-request-id": "700fd2d204d8591b"
+    },
+    "trusted_host_rejection": 400,
+    "unsupported_upload": {
+      "body": {
+        "error": {
+          "code": "invalid_file",
+          "message": "upload a .csv or .xlsx file"
+        }
+      },
+      "status": 400
+    },
+    "users": [
+      {
+        "role": "manager",
+        "username": "manager"
+      }
+    ]
+  },
+  "concurrency_backup": {
+    "backup_counts": {
+      "audit_log": 8,
+      "exceptions": 2,
+      "imports": 1,
+      "ledger_entries": 2,
+      "model_runs": 1,
+      "review_set_events": 1,
+      "reviews": 2
+    },
+    "backup_integrity": "ok",
+    "concurrent_locks": [
+      "WorkflowError: review set is already locked",
+      "ok"
+    ],
+    "concurrent_reviews": [
+      "ok",
+      "ok"
+    ]
+  },
+  "governance": {
+    "analysis_before_ack_blocked": true,
+    "checks": {
+      "bad_second_role": {
+        "blocked": true,
+        "code": "forbidden"
+      },
+      "high_no_second": {
+        "blocked": true,
+        "code": "second_review_required"
+      },
+      "locked_assignment": {
+        "blocked": true,
+        "code": "review_locked"
+      },
+      "locked_review": {
+        "blocked": true,
+        "code": "review_locked"
+      },
+      "no_note": {
+        "blocked": true,
+        "code": "invalid_input"
+      },
+      "no_role": {
+        "blocked": true,
+        "code": "forbidden"
+      },
+      "same_second": {
+        "blocked": true,
+        "code": "second_review_invalid"
+      }
+    },
+    "direct_severity_mutation": {
+      "blocked": true,
+      "error": "exception severity is immutable; create a new analysis run"
+    },
+    "direct_status_mutation": {
+      "blocked": true,
+      "error": "exception status must match latest review"
+    },
+    "valid_high_clear": {
+      "exception_id": 1,
+      "review_id": 1,
+      "status": "cleared"
+    }
+  }
+}

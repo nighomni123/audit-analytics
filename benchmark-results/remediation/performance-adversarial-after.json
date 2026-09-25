@@ -1,0 +1,59 @@
+{
+  "note": "Adversarial same-account/same-amount bucket exposes the reversal comparison ceiling.",
+  "results": [
+    {
+      "exceptions": 0,
+      "same_account_amount_bucket": true,
+      "size": 1000,
+      "timing": {
+        "peak_python_bytes": 2086108,
+        "seconds": 0.08977298300305847
+      }
+    },
+    {
+      "exceptions": 0,
+      "same_account_amount_bucket": true,
+      "size": 2000,
+      "timing": {
+        "peak_python_bytes": 3879215,
+        "seconds": 0.22300756200274918
+      }
+    },
+    {
+      "exceptions": 0,
+      "same_account_amount_bucket": true,
+      "size": 5000,
+      "timing": {
+        "peak_python_bytes": 9498148,
+        "seconds": 0.5701712379959645
+      }
+    },
+    {
+      "exceptions": 0,
+      "same_account_amount_bucket": true,
+      "size": 10000,
+      "timing": {
+        "peak_python_bytes": 19087108,
+        "seconds": 0.9444148629991105
+      }
+    },
+    {
+      "exceptions": 0,
+      "same_account_amount_bucket": true,
+      "size": 20000,
+      "timing": {
+        "peak_python_bytes": 37749716,
+        "seconds": 3.8558766709902557
+      }
+    },
+    {
+      "exceptions": 0,
+      "same_account_amount_bucket": true,
+      "size": 50000,
+      "timing": {
+        "peak_python_bytes": 96774436,
+        "seconds": 15.685514797994983
+      }
+    }
+  ]
+}

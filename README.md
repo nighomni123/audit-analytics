@@ -329,6 +329,11 @@ account-peer outliers, and Benford applicability checks. The optional local
 isolation-style scorer runs only for populations of 256+ entries; disable it
 with `--no-isolation` if it is outside the approved engagement methodology.
 
+Analysis is guarded at 100,000 rows on the measured local profile. A larger
+import remains intact but is not silently analyzed; split or explicitly sample
+the engagement rather than bypassing the guard. The limit is a measured local
+boundary, not a universal hardware guarantee.
+
 Each output is a risk cue with reasons and evidence. It is not a fraud finding,
 an audit exception, or an audit opinion.
 

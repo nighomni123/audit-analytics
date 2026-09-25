@@ -74,6 +74,8 @@ CSV or bounded XLSX
 
 - Lexical search remains transparent and uses `max(token_score, cosine_similarity)`.
 - Similarity retrieval batches all vectors for the selected model/dimensions once and uses exact NumPy cosine arithmetic; no ANN/vector database is hidden in this release.
+- Reversal matching uses sorted date windows plus a range-minimum index while preserving the first eligible counterpart in original ledger order. Dense same-bucket 10k analysis measured 0.94s after remediation.
+- Deterministic analysis rejects populations above the measured 100,000-row local safety boundary before model-run creation; imports remain intact.
 - Semantic Risk Engine candidate selection remains deterministic and bounded. Runs persist `exhaustive: false`, candidate/population counts, limits, and tie-break metadata.
 - The isolation-style scorer is versioned `isolation-style-random-cut-v1`, records its seed/trees/population floor, and remains experimental. It is not a standard Isolation Forest or a validated audit model.
 - Statistical validation and model promotion require authorised labelled populations and governance approval.

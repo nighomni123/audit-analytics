@@ -56,9 +56,15 @@ Archive the database, hash-addressed `evidence/` directory, exports, and firm-pr
 - **Blank or old UI:** run `npm --prefix frontend ci` and `npm --prefix frontend run build`; confirm `src/audit_analytics/static/index.html` exists.
 - **API unavailable:** verify `serve` is bound to `127.0.0.1`, inspect stderr, and call `/api/health`.
 - **Import rejected as duplicate:** compare the SHA-256 and import ID; use the explicit “new version” action only when the duplicate is intentional.
-- **Analysis blocked:** every GL import must have matching or explicitly documented reconciliation and a reviewer acknowledgement.
+- **Analysis blocked:** first verify acknowledgement/reconciliation. If the error mentions the analysis safety limit, the import is retained; split or explicitly sample the engagement rather than bypassing the guard.
 - **Semantic evidence stale:** the population changed after the profile; rebuild the profile before linking a new analysis run.
 - **Review locked:** use a manager/partner lock reason and the reopen event; do not edit SQLite tables directly.
+
+## Analysis capacity boundary
+
+Import and analysis have different limits. Imports of 250k/500k synthetic rows are supported as evidence retention, but deterministic analysis is guarded at 100,000 rows on the measured local profile. A blocked analysis leaves the import and evidence intact; it does not create a partial model run. Treat the limit as measured-host evidence, not a universal hardware guarantee.
+
+The remediation benchmark reduced dense same-account/same-amount analysis from 433.61s at 10k rows to 0.94s, with 50k measured at 15.69s. The ordinary similarity path remains a dense in-memory scan; 100k at 64 dimensions used approximately 398 MB and 17.29 seconds. Higher-dimensional embeddings and concurrent requests require a separate capacity benchmark.
 
 ## Operational boundaries
 
