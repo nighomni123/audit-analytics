@@ -67,5 +67,28 @@ test("complete persisted workbench workflow at desktop and mobile", async ({ pag
   expect(fitsViewport).toBe(true);
   await page.screenshot({ path: "test-results/workbench-mobile.png", fullPage: true });
 
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto("/#/sample");
+  await expect(page.getByRole("heading", { name: "Testing sample" })).toBeVisible();
+  await page.getByLabel("Sample name").fill("Browser testing sample");
+  await page.getByLabel("Risk-directed entries").fill("2");
+  await page.getByLabel("Random coverage count").fill("1");
+  await page.getByRole("button", { name: "Create sample" }).click();
+  await expect(page.getByText("Browser testing sample").first()).toBeVisible();
+  await expect(page.getByText(/selected/).first()).toBeVisible();
+
+  await page.goto("/#/workpapers");
+  await expect(page.getByRole("heading", { name: "Workpapers" })).toBeVisible();
+  const downloadPromise = page.waitForEvent("download");
+  await page.getByRole("button", { name: "Generate final package" }).click();
+  await downloadPromise;
+
+  await page.goto("/#/activity");
+  await expect(page.getByRole("heading", { name: "Audit trail" })).toBeVisible();
+  await expect(page.getByText("Import Gl")).toBeVisible();
+  await page.keyboard.press("Control+K");
+  await expect(page.getByRole("dialog", { name: "Quick find" })).toBeVisible();
+  await page.keyboard.press("Escape");
+
   expect(pageErrors).toEqual([]);
 });

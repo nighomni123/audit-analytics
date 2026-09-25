@@ -3,30 +3,49 @@ import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { get, post } from "../lib/api";
 import { navigate } from "../lib/navigation";
 import type { ExceptionDetail, SemanticInvestigation, SimilarResult, StatusSummary, User } from "../lib/types";
+import { humanizeReason, parseRunConfiguration } from "../lib/workflow";
 import { DeterministicEvidence, SemanticEvidence } from "../components/EvidenceView";
 import ReviewForm from "../components/ReviewForm";
-import { Card, Loading, Message, PageHeader, formatDate, formatMoney } from "../components/ui";
+import { Button, Disclosure, Field, Loading, Message, Panel, Select, SeverityBadge, StatusBadge, TechnicalDetails, TextArea, TextInput, formatDate, formatDateTime, formatMoney, titleCase } from "../components/ui";
 
 function semanticRunId(detail: ExceptionDetail | null): number | null {
-  const semantic = detail?.evidence.semantic;
+  const semantic = detail?.evidence?.semantic;
   if (!semantic || typeof semantic !== "object" || !("run_id" in semantic)) return null;
-  const value = semantic.run_id;
-  return typeof value === "number" ? value : null;
+  return typeof semantic.run_id === "number" ? semantic.run_id : null;
 }
 
-export default function Investigation({
-  exceptionId,
-  status,
-  users,
-  refresh,
-  revision,
-}: {
-  exceptionId: number | null;
-  status: StatusSummary;
-  users: User[];
-  refresh: () => Promise<void>;
-  revision: number;
-}) {
+function reasonText(reason: string): string {
+  const descriptions: Record<string, string> = {
+    period_end_posting: "Posted within the configured period-end window.",
+    fiscal_period_end: "Posted near a configured fiscal period-end date.",
+    weekend_posting: "Posted on a weekend relative to the engagement calendar.",
+    round_amount: "The amount is a round value at the configured threshold.",
+    robust_account_peer_outlier: "The amount is unusual compared with activity for this account.",
+    rare_account_preparer_pair: "This account and preparer combination is uncommon in the population.",
+    possible_reversal_within_30_days: "A possible opposite-direction entry appears within 30 days.",
+    duplicate_or_repeated_entry: "A repeated account, date, amount, or description pattern was detected.",
+    isolation_style_anomaly: "An experimental ranking signal placed this entry unusually far from peers.",
+    semantic_account_mismatch: "Semantic context differs from the account profile.",
+    semantic_vendor_shift: "Semantic context suggests a change in vendor-related activity.",
+    semantic_novel_transaction: "The narrative is unlike the available local context.",
+  };
+  return descriptions[reason] ?? `${humanizeReason(reason)} was recorded by the governed analysis.`;
+}
+
+function TransactionSummary({ detail }: { detail: ExceptionDetail }) {
+  const fields: Array<[string, string | number | null | undefined]> = [["Entry ID", detail.entry_id], ["Posting date", formatDate(detail.posting_date)], ["Document date", formatDate(detail.document_date)], ["Account", `${detail.account_code}${detail.account_name ? ` · ${detail.account_name}` : ""}`], ["Signed amount", formatMoney(detail.signed_amount)], ["Debit", formatMoney(detail.debit)], ["Credit", formatMoney(detail.credit)], ["Narration", detail.description || "—"], ["Preparer", detail.preparer || "—"], ["Reference", detail.reference || "—"], ["Vendor", detail.vendor || "—"], ["Entity", detail.entity || "—"], ["Manual / system", detail.is_manual ? "Manual" : "System / not flagged"]];
+  return <Panel className="transaction-panel"><div className="section-heading"><div><div className="eyebrow">TRANSACTION CONTEXT</div><h2>Source journal entry</h2></div><StatusBadge tone="neutral">Persisted ledger</StatusBadge></div><div className="transaction-grid">{fields.map(([label, value]) => <div className={label === "Narration" ? "transaction-field transaction-field-wide" : "transaction-field"} key={label}><span>{label}</span><strong className={label === "Narration" ? "wrap-value" : ""}>{value}</strong></div>)}</div><Disclosure summary="Source lineage"><div className="lineage-grid"><div><span>Import ID</span><strong>#{detail.import_id}</strong></div><div><span>Source row</span><strong>{detail.source_row}</strong></div><div><span>Source filename</span><strong>Preserved GL evidence</strong></div><div><span>SHA-256</span><code>{detail.source_hash}</code></div></div><TechnicalDetails value={detail.source_record} label="Original source row" /></Disclosure></Panel>;
+}
+
+function ReviewTimeline({ detail }: { detail: ExceptionDetail }) {
+  return <Panel className="review-timeline"><div className="section-heading"><div><div className="eyebrow">IMMUTABLE HISTORY</div><h2>Review timeline</h2></div><span className="muted-label">{detail.reviews.length} event{detail.reviews.length === 1 ? "" : "s"}</span></div>{detail.reviews.length ? <ol className="timeline-list">{[...detail.reviews].reverse().map((review) => <li key={review.id}><div className="timeline-marker" /><div className="timeline-time">{formatDateTime(review.created_at)}</div><div className="timeline-content"><div><strong>{review.reviewer}</strong><StatusBadge tone={review.disposition === "cleared" ? "success" : review.disposition === "follow_up" ? "warning" : "indigo"}>{titleCase(review.disposition)}</StatusBadge></div><p>{review.note}</p>{review.second_reviewer && <div className="second-review-note"><strong>Second review · {review.second_reviewer}</strong><span>{review.second_note}</span></div>}</div></li>)}</ol> : <div className="timeline-empty"><span>○</span><p>No review has been recorded for this cue.</p></div>}</Panel>;
+}
+
+function SimilarTransactions({ query, setQuery, results, onSearch }: { query: string; setQuery: (value: string) => void; results: SimilarResult[]; onSearch: (event: FormEvent) => void }) {
+  return <Panel className="similar-panel"><div className="section-heading"><div><div className="eyebrow">SEARCH THE POPULATION</div><h2>Find similar transactions</h2></div><span className="search-shortcut">⌘ K</span></div><form className="similar-form" onSubmit={onSearch}><TextInput value={query} onChange={(event) => setQuery(event.target.value)} placeholder="manual year-end tax provision" aria-label="Find similar transactions" /><Button type="submit" size="sm">Search</Button></form>{results.length ? <div className="similar-results">{results.map((item) => <div className="similar-result" key={item.ledger_id}><div><strong>{item.entry_id}</strong><span>{formatDate(item.posting_date)} · {item.account_code} · {formatMoney(item.signed_amount)}</span><p>{item.description || "No narration supplied"}</p></div><div className="similar-scores"><span>Overall {Math.round(item.score * 100)}%</span><span>Lexical {Math.round(item.token_score * 100)}%</span>{item.semantic_score !== null && <span>Semantic {Math.round(item.semantic_score * 100)}%</span>}</div>{item.shared_tokens.length > 0 && <div className="shared-tokens">{item.shared_tokens.slice(0, 5).map((token) => <span key={token}>{token}</span>)}</div>}</div>)}</div> : <p className="muted-copy">Search by wording to compare lexical and semantic context. Similarity is not proof of a relationship.</p>}</Panel>;
+}
+
+export default function Investigation({ exceptionId, status, users, refresh, revision, routeParams }: { exceptionId: number | null; status: StatusSummary; users: User[]; refresh: () => Promise<void>; revision: number; routeParams?: URLSearchParams }) {
   const [detail, setDetail] = useState<ExceptionDetail | null>(null);
   const [semantic, setSemantic] = useState<SemanticInvestigation | null>(null);
   const [query, setQuery] = useState("");
@@ -36,138 +55,23 @@ export default function Investigation({
   const [notice, setNotice] = useState("");
   const [reload, setReload] = useState(0);
   const [lockReason, setLockReason] = useState("");
-  const managers = useMemo(() => users.filter((user) => ["manager", "partner"].includes(user.role)), [users]);
   const [manager, setManager] = useState("");
-
+  const [assignee, setAssignee] = useState("");
+  const [dueDate, setDueDate] = useState("");
+  const [assignmentBusy, setAssignmentBusy] = useState(false);
+  const managers = useMemo(() => users.filter((user) => ["manager", "partner"].includes(user.role)), [users]);
+  const reviewers = useMemo(() => users.filter((user) => ["reviewer", "manager", "partner", "quality_reviewer"].includes(user.role)), [users]);
+  useEffect(() => { setManager((current) => current || managers[0]?.username || ""); }, [managers]);
   useEffect(() => {
-    setManager((current) => current || managers[0]?.username || "");
-  }, [managers]);
-
-  useEffect(() => {
-    if (!exceptionId) {
-      setDetail(null);
-      setLoading(false);
-      return;
-    }
-    setLoading(true);
-    setError("");
-    get<ExceptionDetail>(`/exceptions/${exceptionId}`)
-      .then((result) => {
-        setDetail(result);
-        const run = semanticRunId(result);
-        if (run) return get<SemanticInvestigation>(`/semantic-investigation?run=${run}&ledger_id=${result.ledger_id}`).then(setSemantic);
-        setSemantic(null);
-        return undefined;
-      })
-      .catch((cause: Error) => setError(cause.message))
-      .finally(() => setLoading(false));
+    if (!exceptionId) { setDetail(null); setLoading(false); return; }
+    if (!detail) setLoading(true); setError("");
+    get<ExceptionDetail>(`/exceptions/${exceptionId}`).then(async (result) => { setDetail(result); setAssignee(result.assigned_to ?? ""); setDueDate(result.due_date ?? ""); const run = semanticRunId(result); if (run) { try { setSemantic(await get<SemanticInvestigation>(`/semantic-investigation?run=${run}&ledger_id=${result.ledger_id}`)); } catch { setSemantic(null); } } else setSemantic(null); }).catch((cause: Error) => setError(cause.message)).finally(() => setLoading(false));
   }, [exceptionId, reload, revision]);
-
-  async function reloadDetail() {
-    setReload((value) => value + 1);
-    await refresh();
-  }
-
-  async function search(event: FormEvent) {
-    event.preventDefault();
-    if (!query.trim()) return;
-    setError("");
-    try {
-      const result = await get<{ results: SimilarResult[] }>(`/similar?q=${encodeURIComponent(query.trim())}&limit=10`);
-      setSimilar(result.results);
-    } catch (cause) {
-      setError((cause as Error).message);
-    }
-  }
-
-  async function changeLock(event: "locked" | "reopened") {
-    setError("");
-    setNotice("");
-    try {
-      await post(`/review-set/${event === "locked" ? "lock" : "reopen"}`, { actor: manager, reason: lockReason });
-      setLockReason("");
-      await refresh();
-      setNotice(event === "locked" ? "Review set locked." : "Review set reopened.");
-    } catch (cause) {
-      setError((cause as Error).message);
-    }
-  }
-
-  if (!exceptionId) {
-    return (
-      <section className="rounded-2xl border border-slate-200 bg-white p-8 shadow-sm">
-        <PageHeader title="Investigation & Review" description="Select a risk cue from the dashboard to inspect its persisted ledger, evidence, semantic context, and review history." />
-        <button className="rounded-lg bg-slate-900 px-4 py-2 font-semibold text-white" onClick={() => navigate("dashboard")}>Open dashboard</button>
-      </section>
-    );
-  }
-
-  return (
-    <section className="space-y-6">
-      <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
-        <PageHeader
-          title="Investigation & Review"
-          description="The workspace is bound to the selected exception. All transaction identity, evidence, and review state comes from the engagement database."
-          action={<button className="rounded-lg border border-slate-300 px-3 py-2 text-sm font-semibold" onClick={() => navigate("dashboard", { run: detail?.run_id })}>Back to dashboard</button>}
-        />
-        {error && <div className="mb-5"><Message kind="error">{error}</Message></div>}
-        {notice && <div className="mb-5"><Message kind="success">{notice}</Message></div>}
-        {loading || !detail ? <Loading label="Loading selected exception…" /> : (
-          <>
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-              <Card label="Entry" value={detail.entry_id} />
-              <Card label="Posting date" value={formatDate(detail.posting_date)} />
-              <Card label="Signed amount" value={formatMoney(detail.signed_amount)} />
-              <Card label="Current status" value={detail.status.replaceAll("_", " ")} />
-            </div>
-            <div className="mt-5 grid gap-5 xl:grid-cols-2">
-              <div className="rounded-xl border border-slate-200 p-5">
-                <h3 className="text-lg font-bold">Transaction context</h3>
-                <dl className="mt-3 grid grid-cols-[9rem_1fr] gap-y-2 text-sm">
-                  <dt className="font-medium text-slate-500">Account</dt><dd>{detail.account_code} {detail.account_name ?? ""}</dd>
-                  <dt className="font-medium text-slate-500">Narration</dt><dd>{detail.description || "—"}</dd>
-                  <dt className="font-medium text-slate-500">Preparer</dt><dd>{detail.preparer || "—"}</dd>
-                  <dt className="font-medium text-slate-500">Reference</dt><dd>{detail.reference || "—"}</dd>
-                  <dt className="font-medium text-slate-500">Source lineage</dt><dd>Import {detail.import_id} · row {detail.source_row} · SHA-256 {detail.source_hash.slice(0, 16)}…</dd>
-                </dl>
-              </div>
-              <div className="rounded-xl border border-slate-200 p-5">
-                <DeterministicEvidence detail={detail} />
-              </div>
-            </div>
-          </>
-        )}
-      </div>
-
-      {semantic && <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm"><h3 className="mb-4 text-lg font-bold">Experimental semantic evidence</h3><SemanticEvidence investigation={semantic} /></div>}
-
-      <div className="grid gap-6 xl:grid-cols-2">
-        <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-          {detail ? <ReviewForm detail={detail} users={users} locked={status.review_set.locked} onSaved={reloadDetail} /> : <Loading />}
-        </div>
-        <div className="space-y-6">
-          <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-            <h3 className="text-lg font-bold">Review-set governance</h3>
-            <p className="mt-2 text-sm text-slate-600">Current state: <strong>{status.review_set.locked ? "locked" : "open"}</strong>{status.review_set.reason ? ` · ${status.review_set.reason}` : ""}</p>
-            <div className="mt-3 grid gap-3 sm:grid-cols-2">
-              <label className="grid gap-1 text-sm font-medium">Manager<select className="rounded-lg border border-slate-300 px-3 py-2" value={manager} onChange={(event) => setManager(event.target.value)}>{managers.map((user) => <option key={user.username} value={user.username}>{user.username}</option>)}</select></label>
-              <label className="grid gap-1 text-sm font-medium">Reason<input className="rounded-lg border border-slate-300 px-3 py-2" value={lockReason} onChange={(event) => setLockReason(event.target.value)} /></label>
-            </div>
-            <div className="mt-3 flex gap-2">
-              <button disabled={status.review_set.locked || !manager || !lockReason.trim()} onClick={() => changeLock("locked")} className="rounded-lg bg-slate-900 px-3 py-2 text-sm font-semibold text-white disabled:opacity-40">Lock review set</button>
-              <button disabled={!status.review_set.locked || !manager || !lockReason.trim()} onClick={() => changeLock("reopened")} className="rounded-lg border border-slate-300 px-3 py-2 text-sm font-semibold disabled:opacity-40">Reopen review set</button>
-            </div>
-          </div>
-
-          <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-            <h3 className="text-lg font-bold">Similar transaction search</h3>
-            <form onSubmit={search} className="mt-3 flex gap-2"><input className="min-w-0 flex-1 rounded-lg border border-slate-300 px-3 py-2" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="manual year-end tax provision" /><button className="rounded-lg border border-slate-300 px-3 py-2 text-sm font-semibold">Search</button></form>
-            <div className="mt-3 grid gap-2">{similar.map((item) => <div key={item.ledger_id} className="rounded-lg bg-slate-50 p-3 text-left text-sm"><strong>{item.entry_id}</strong> · {formatMoney(item.signed_amount)} · score {item.score}<div className="text-slate-600">{item.description || "—"}</div></div>)}</div>
-          </div>
-        </div>
-      </div>
-
-      {detail && <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm"><h3 className="mb-3 text-lg font-bold">Immutable review history</h3>{detail.reviews.length === 0 ? <p className="text-sm text-slate-500">No review has been recorded.</p> : <ol className="space-y-3">{detail.reviews.map((review) => <li key={review.id} className="rounded-lg border border-slate-200 p-3 text-sm"><strong>{review.disposition.replaceAll("_", " ")}</strong> by {review.reviewer}<div>{review.note}</div>{review.second_reviewer && <div className="mt-1 text-indigo-800">Second review: {review.second_reviewer} · {review.second_note}</div>}</li>)}</ol>}</div>}
-    </section>
-  );
+  async function reloadDetail() { setReload((value) => value + 1); await refresh(); }
+  async function search(event: FormEvent) { event.preventDefault(); if (!query.trim()) return; try { const result = await get<{ results: SimilarResult[] }>(`/similar?q=${encodeURIComponent(query.trim())}&limit=10`); setSimilar(result.results); } catch (cause) { setError(cause instanceof Error ? cause.message : "Similar transactions could not be loaded."); } }
+  async function assign() { if (!detail) return; setAssignmentBusy(true); setError(""); setNotice(""); try { await post("/assignments", { actor: manager, exception_id: detail.id, assignee, due_date: dueDate || null }); await reloadDetail(); setNotice("Assignment recorded."); } catch (cause) { setError(cause instanceof Error ? cause.message : "The assignment could not be recorded."); } finally { setAssignmentBusy(false); } }
+  async function changeLock(action: "lock" | "reopen") { try { await post(`/review-set/${action === "lock" ? "lock" : "reopen"}`, { actor: manager, reason: lockReason }); setLockReason(""); await refresh(); setNotice(action === "lock" ? "Review set locked." : "Review set reopened."); } catch (cause) { setError(cause instanceof Error ? cause.message : "The review-set event could not be recorded."); } }
+  if (!exceptionId) return <div className="investigation-empty"><div className="eyebrow">STEP 05 · INVESTIGATION</div><h1>Investigation & Review</h1><p>Select a risk cue from the queue to inspect its evidence, source lineage, and immutable review history.</p><Button variant="primary" onClick={() => navigate("risk")}>Open risk queue</Button></div>;
+  const backParams = { run: routeParams?.get("run") ?? detail?.run_id, search: routeParams?.get("search") ?? "", severity: routeParams?.get("severity") ?? "", status: routeParams?.get("status") ?? "" };
+  return <div className="investigation-page"><div className="investigation-breadcrumb"><button onClick={() => navigate("risk", backParams)}>← Back to risk queue</button><span>/</span><span>{detail?.entry_id ?? "Loading entry"}</span></div>{error && <Message kind="error">{error}</Message>}{notice && <Message kind="success">{notice}</Message>}{loading || !detail ? <Loading label="Opening investigation workspace…" /> : <><header className="investigation-hero"><div className="investigation-hero-main"><div className="investigation-kicker"><SeverityBadge severity={detail.severity} /><span>{detail.run_id ? `Analysis run ${detail.run_id}` : "Risk cue"}</span></div><h1>Investigation & Review</h1><div className="investigation-entry-line"><span className="entry-id-large">{detail.entry_id}</span><span className="entry-separator">·</span><span>{formatDate(detail.posting_date)}</span><span className="entry-separator">·</span><strong>{formatMoney(detail.signed_amount)}</strong></div><p>{detail.account_code} {detail.account_name ?? ""} <span>·</span> {detail.description || "No narration supplied"}</p></div><div className="investigation-hero-side"><StatusBadge tone={detail.status === "cleared" ? "success" : detail.status === "follow_up" ? "warning" : "indigo"} dot>{titleCase(detail.status)}</StatusBadge><span className="hero-side-label">Current disposition</span><span className="hero-side-value">{detail.assigned_to ? `Assigned to ${detail.assigned_to}` : "Unassigned"}</span></div></header><div className="investigation-content"><div className="investigation-main-column"><Panel className="why-panel"><div className="section-heading"><div><div className="eyebrow">WHY THIS ENTRY SURFACED</div><h2>Start with the reasoning</h2><p className="section-description">These are analytical cues that warrant attention. They are not conclusions about the entry.</p></div><span className="reason-count">{detail.reasons.length} cue{detail.reasons.length === 1 ? "" : "s"}</span></div><div className="reason-list">{detail.reasons.length ? detail.reasons.map((reason, index) => <div className="reason-item" key={reason}><span className="reason-number">{String(index + 1).padStart(2, "0")}</span><div><strong>{humanizeReason(reason)}</strong><p>{reasonText(reason)}</p></div><span className="reason-arrow">↗</span></div>) : <div className="no-reasons"><span>○</span><p>No deterministic cue was recorded for this entry.</p></div>}</div></Panel><TransactionSummary detail={detail} /><Panel className="deterministic-panel"><DeterministicEvidence detail={detail} /></Panel>{semantic && <Panel className="semantic-panel"><SemanticEvidence investigation={semantic} /></Panel>}<div className="investigation-technical"><Disclosure summary="Technical run context"><div className="technical-context"><div><span>Run ID</span><strong>{detail.run_id}</strong></div><div><span>Materiality band</span><strong>{detail.materiality_band ? titleCase(detail.materiality_band) : "Not set"}</strong></div><div><span>Risk priority</span><strong>{detail.risk_score} / 100</strong></div></div><TechnicalDetails value={{ run: parseRunConfiguration(status.latest_run), signal_components: detail.evidence.signal_components }} label="Run and signal details" /></Disclosure></div></div><aside className="investigation-side"><div className="sticky-review-wrap"><ReviewForm detail={detail} users={users} locked={status.review_set.locked} onSaved={reloadDetail} /><Panel className="assignment-panel"><div className="section-heading"><div><div className="eyebrow">ASSIGNMENT</div><h2>Route the work</h2></div></div><div className="assignment-grid"><Field label="Manager"><Select value={manager} onChange={(event) => setManager(event.target.value)} disabled={status.review_set.locked}><option value="">Choose manager</option>{managers.map((user) => <option key={user.username} value={user.username}>{user.username}</option>)}</Select></Field><Field label="Assign to"><Select value={assignee} onChange={(event) => setAssignee(event.target.value)} disabled={status.review_set.locked}><option value="">Unassigned</option>{reviewers.map((user) => <option key={user.username} value={user.username}>{user.username} · {user.role}</option>)}</Select></Field><Field label="Due date"><TextInput type="date" value={dueDate} onChange={(event) => setDueDate(event.target.value)} disabled={status.review_set.locked} /></Field></div><Button variant="secondary" size="sm" onClick={assign} disabled={status.review_set.locked || !manager || !assignee || assignmentBusy}>{assignmentBusy ? "Saving assignment…" : "Save assignment"}</Button></Panel></div><ReviewTimeline detail={detail} /><SimilarTransactions query={query} setQuery={setQuery} results={similar} onSearch={search} /><Panel className="governance-panel"><div className="eyebrow">REVIEW-SET CONTROL</div><h2>{status.review_set.locked ? "Review set locked" : "Governance milestone"}</h2><p>{status.review_set.locked ? "Reopen with a reasoned event before changing assignments or dispositions." : "Lock the completed review set when the workpaper is ready to finalize."}</p><Field label="Reason"><TextInput value={lockReason} onChange={(event) => setLockReason(event.target.value)} placeholder="Reason for the governance event" /></Field><div className="governance-actions">{!status.review_set.locked && <Button size="sm" onClick={() => changeLock("lock")} disabled={!manager || !lockReason.trim()}>Lock review set</Button>}{status.review_set.locked && <Button size="sm" variant="secondary" onClick={() => changeLock("reopen")} disabled={!manager || !lockReason.trim()}>Reopen review set</Button>}</div></Panel></aside></div></>}</div>;
 }

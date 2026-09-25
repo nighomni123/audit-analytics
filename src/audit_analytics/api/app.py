@@ -1,14 +1,18 @@
 """Canonical local FastAPI service for the Audit Analytics workbench."""
 from __future__ import annotations
 
+import csv
 import json
 import logging
 import os
 import secrets
+import sqlite3
 import tempfile
 import time
 import zipfile
 from contextlib import contextmanager
+from datetime import date
+from decimal import Decimal, InvalidOperation
 from pathlib import Path
 from typing import Literal
 
@@ -28,6 +32,7 @@ from audit_analytics.importer import (
 )
 from audit_analytics.model_registry import list_models
 from audit_analytics.reports import compare_runs, engagement_summary, export_workpaper, write_engagement_report
+from audit_analytics.sampling import create_sample
 from audit_analytics.semantic import similar_transactions
 from audit_analytics.semantic_risk import get_semantic_profile, semantic_investigate
 from audit_analytics.store import Store
@@ -108,6 +113,16 @@ class ExportBody(StrictModel):
     actor: str = Field(min_length=1, max_length=100)
 
 
+class SampleSetBody(StrictModel):
+    actor: str = Field(min_length=1, max_length=100)
+    name: str = Field(min_length=1, max_length=200)
+    run_id: int | None = Field(default=None, gt=0)
+    risk_count: int = Field(default=20, ge=0)
+    random_count: int = Field(default=10, ge=0)
+    seed: int = Field(default=1)
+    random_min_amount: float | None = Field(default=None, ge=0, allow_inf_nan=False)
+
+
 def _error(code: str, message: str, status: int, **details):
     body = {"error": {"code": code, "message": message}}
     if details:
@@ -153,17 +168,75 @@ def _upload_path(upload: UploadFile):
         upload.file.close()
 
 
+def _decode_json(value, fallback):
+    try:
+        return json.loads(value)
+    except (TypeError, ValueError):
+        return fallback
+
+
 def _decode(row):
     item = dict(row)
-    for field in ("reasons_json", "evidence_json"):
+    for field in ("reasons_json", "evidence_json", "detail_json"):
         if field in item:
             key = field.removesuffix("_json")
-            item[key] = json.loads(item.pop(field))
+            item[key] = _decode_json(item.pop(field), [] if key == "reasons" else {})
     if "configuration" in item:
-        try:
-            item["configuration"] = json.loads(item["configuration"])
-        except (TypeError, ValueError):
-            item["configuration"] = {}
+        item["configuration"] = _decode_json(item["configuration"], {})
+    return item
+
+
+def _sample_payload(store: Store, sample_id: int, item_limit: int):
+    row = store.conn.execute("SELECT * FROM sample_sets WHERE id=?", (sample_id,)).fetchone()
+    if not row:
+        raise LookupError("sample set not found")
+    item = dict(row)
+    item["method"] = _decode_json(item.pop("method_json"), {})
+    item["item_count"] = store.conn.execute(
+        "SELECT COUNT(*) FROM sample_items WHERE sample_set_id=?", (sample_id,)
+    ).fetchone()[0]
+    item["selected_count"] = item["item_count"]
+    item["items"] = []
+    for selected in store.conn.execute(
+        """SELECT si.ledger_id,si.rationale,l.entry_id,l.posting_date,l.document_date,l.account_code,
+                  c.account_name,l.debit,l.credit,l.signed_amount,l.description,l.preparer,l.reference,
+                  l.entity,l.vendor,l.is_manual,l.import_id,l.source_row,l.source_hash,
+                  e.id AS exception_id,e.run_id AS exception_run_id,e.risk_score AS exception_risk_score,
+                  e.severity AS exception_severity,e.status AS exception_status,
+                  e.materiality_band AS exception_materiality_band,e.assigned_to AS exception_assigned_to,
+                  e.due_date AS exception_due_date,e.reasons_json AS exception_reasons_json,
+                  e.evidence_json AS exception_evidence_json
+           FROM sample_items si JOIN ledger_entries l ON l.id=si.ledger_id
+           LEFT JOIN coa c ON c.account_code=l.account_code
+           LEFT JOIN exceptions e ON e.ledger_id=si.ledger_id AND e.run_id=?
+           WHERE si.sample_set_id=? ORDER BY si.rowid LIMIT ?""",
+        (item["run_id"], sample_id, item_limit),
+    ):
+        entry = dict(selected)
+        exception_id = entry.pop("exception_id", None)
+        if exception_id is None:
+            entry["exception"] = None
+        else:
+            entry["exception"] = {
+                "id": exception_id,
+                "run_id": entry.pop("exception_run_id", None),
+                "risk_score": entry.pop("exception_risk_score", None),
+                "severity": entry.pop("exception_severity", None),
+                "status": entry.pop("exception_status", None),
+                "materiality_band": entry.pop("exception_materiality_band", None),
+                "assigned_to": entry.pop("exception_assigned_to", None),
+                "due_date": entry.pop("exception_due_date", None),
+                "reasons": _decode_json(entry.pop("exception_reasons_json", "[]"), []),
+                "evidence": _decode_json(entry.pop("exception_evidence_json", "{}"), {}),
+            }
+        for key in (
+            "exception_run_id", "exception_risk_score", "exception_severity", "exception_status",
+            "exception_materiality_band", "exception_assigned_to", "exception_due_date",
+            "exception_reasons_json", "exception_evidence_json",
+        ):
+            entry.pop(key, None)
+        item["items"].append(entry)
+    item["items_truncated"] = item["item_count"] > len(item["items"])
     return item
 
 
@@ -420,6 +493,184 @@ def create_app(db_path: str | Path | None = None, static_dir: str | Path | None 
         finally:
             store.close()
 
+    @app.post("/api/sample-sets")
+    def sample_set_create(body: SampleSetBody, request: Request):
+        store = concrete_store(request)
+        try:
+            try:
+                require_role(store, body.actor, REVIEW_ROLES)
+                sample_id, selected = create_sample(
+                    store,
+                    body.name,
+                    body.actor,
+                    body.run_id,
+                    body.risk_count,
+                    body.random_count,
+                    body.seed,
+                    body.random_min_amount,
+                )
+                return {"sample_set_id": sample_id, "selected": selected}
+            except sqlite3.IntegrityError as exc:
+                store.conn.rollback()
+                if "FOREIGN KEY" in str(exc).upper():
+                    raise WorkflowError("analysis run not found", "not_found", 404) from exc
+                if "sample_sets" in str(exc):
+                    raise WorkflowError("sample set already exists for this analysis run", "conflict", 409) from exc
+                raise WorkflowError("sample set could not be created", "invalid_input", 400) from exc
+            except Exception:
+                store.conn.rollback()
+                raise
+        finally:
+            store.close()
+
+    @app.get("/api/sample-sets")
+    def sample_sets(
+        request: Request,
+        limit: int = Query(100, ge=1, le=500),
+        offset: int = Query(0, ge=0),
+    ):
+        store = concrete_store(request)
+        try:
+            rows = store.conn.execute(
+                "SELECT id FROM sample_sets ORDER BY id DESC LIMIT ? OFFSET ?", (limit, offset)
+            ).fetchall()
+            return {
+                "rows": [_sample_payload(store, row["id"], 100) for row in rows],
+                "limit": limit,
+                "offset": offset,
+            }
+        finally:
+            store.close()
+
+    @app.get("/api/sample-sets/{sample_id}")
+    def sample_set_detail(
+        sample_id: int,
+        request: Request,
+        limit: int = Query(500, ge=1, le=500),
+    ):
+        store = concrete_store(request)
+        try:
+            return _sample_payload(store, sample_id, limit)
+        finally:
+            store.close()
+
+    @app.get("/api/audit-log")
+    def audit_log(
+        request: Request,
+        limit: int = Query(100, ge=1, le=500),
+        offset: int = Query(0, ge=0),
+        action: str | None = Query(None, max_length=100),
+        target_type: str | None = Query(None, max_length=100),
+        target_id: str | None = Query(None, min_length=1, max_length=200),
+        actor: str | None = Query(None, max_length=100),
+    ):
+        store = concrete_store(request)
+        try:
+            clauses, params = ["1=1"], []
+            if action is not None:
+                clauses.append("action=?")
+                params.append(action)
+            if target_type is not None:
+                clauses.append("target_type=?")
+                params.append(target_type)
+            if target_id is not None:
+                clauses.append("target_id=?")
+                params.append(target_id)
+            if actor is not None:
+                clauses.append("actor=?")
+                params.append(actor)
+            where = " AND ".join(clauses)
+            rows = store.conn.execute(
+                f"SELECT * FROM audit_log WHERE {where} ORDER BY id DESC LIMIT ? OFFSET ?",
+                (*params, limit, offset),
+            ).fetchall()
+            return {"rows": [_decode(row) for row in rows], "limit": limit, "offset": offset}
+        finally:
+            store.close()
+
+    @app.post("/api/demo/seed")
+    def demo_seed(request: Request):
+        store = concrete_store(request)
+        try:
+            has_data = store.conn.execute(
+                "SELECT EXISTS(SELECT 1 FROM engagement) OR EXISTS(SELECT 1 FROM imports) "
+                "OR EXISTS(SELECT 1 FROM ledger_entries) OR EXISTS(SELECT 1 FROM model_runs)"
+            ).fetchone()[0]
+            if has_data:
+                raise WorkflowError("demo seed requires an empty engagement", "conflict", 409)
+            fixture = Path(__file__).resolve().parents[3] / "examples" / "demo-journal-entries.csv"
+            if not fixture.is_file():
+                raise LookupError("demo fixture not found: examples/demo-journal-entries.csv")
+            preview = preview_gl(str(fixture))
+            try:
+                with fixture.open(newline="", encoding="utf-8-sig") as stream:
+                    fixture_rows = list(csv.DictReader(stream))
+                fixture_debits = sum(
+                    (Decimal(str(row.get("amount") or "0").replace(",", "").replace("₹", "").strip() or "0") for row in fixture_rows),
+                    Decimal("0"),
+                )
+            except (OSError, csv.Error, InvalidOperation, ValueError) as exc:
+                raise WorkflowError("demo fixture could not be read as the expected synthetic source", "invalid_fixture", 409) from exc
+            if preview["row_count"] != 400 or preview["missing_required"] or fixture_debits != Decimal("3496407.62"):
+                raise WorkflowError("demo fixture is not the expected 400-row source", "invalid_fixture", 409)
+            owner = "synthetic-demo-manager"
+            engagement = create_engagement(
+                store,
+                "Synthetic Demo Engagement (source-checkout fixture)",
+                "2025-01-01:2026-03-31",
+                owner,
+            )
+            import_id, accepted, rejected, debits, credits = import_gl(
+                store,
+                str(fixture),
+                owner,
+                expected_rows=400,
+                expected_debits=3496407.62,
+                expected_credits=0,
+            )
+            if accepted != 400 or rejected != 0 or abs(debits - 3496407.62) > 0.01 or abs(credits) > 0.01:
+                raise WorkflowError("demo fixture control totals are not the expected synthetic totals", "invalid_fixture", 409)
+            acknowledgement = acknowledge_population(
+                store,
+                owner,
+                "Synthetic source-checkout fixture; no client approval or review is represented.",
+            )
+            configuration = configure_engagement(
+                store,
+                owner,
+                materiality=100000,
+                performance_materiality=25000,
+                round_amount_threshold=1000,
+                period_end_days=3,
+                outlier_robust_z=3.5,
+            )
+            analysis_run_id = run_analysis(store, owner)["run_id"]
+            exception_count = store.conn.execute("SELECT COUNT(*) FROM exceptions WHERE run_id=?", (analysis_run_id,)).fetchone()[0]
+            review_count = store.conn.execute("SELECT COUNT(*) FROM reviews").fetchone()[0]
+            return {
+                "synthetic": True,
+                "fixture": "examples/demo-journal-entries.csv",
+                "engagement": engagement,
+                "engagement_id": engagement["id"],
+                "import_id": import_id,
+                "accepted": accepted,
+                "rejected": rejected,
+                "debits": round(debits, 2),
+                "credits": round(credits, 2),
+                "entries": accepted,
+                "run_id": analysis_run_id,
+                "analysis_run_id": analysis_run_id,
+                "exceptions": exception_count,
+                "reviews": review_count,
+                "acknowledged_import_ids": acknowledgement["import_ids"],
+                "configuration": configuration,
+            }
+        except Exception:
+            store.conn.rollback()
+            raise
+        finally:
+            store.close()
+
     @app.get("/api/exceptions")
     def exceptions(
         request: Request,
@@ -427,11 +678,22 @@ def create_app(db_path: str | Path | None = None, static_dir: str | Path | None 
         severity: Literal["high", "medium", "low"] | None = None,
         status_filter: Literal["open", "cleared", "follow_up", "selected_for_testing"] | None = Query(None, alias="status"),
         search: str | None = Query(None, max_length=200),
+        assigned_to: str | None = Query(None, max_length=100),
+        account: str | None = Query(None, max_length=100),
+        preparer: str | None = Query(None, max_length=100),
+        materiality_band: str | None = Query(None, max_length=50),
+        signal: str | None = Query(None, max_length=100),
+        date_from: date | None = Query(None),
+        date_to: date | None = Query(None),
+        min_amount: float | None = Query(None, allow_inf_nan=False),
+        max_amount: float | None = Query(None, allow_inf_nan=False),
         limit: int = Query(100, ge=1, le=500),
         offset: int = Query(0, ge=0),
     ):
         store = concrete_store(request)
         try:
+            if min_amount is not None and max_amount is not None and min_amount > max_amount:
+                raise WorkflowError("min_amount must not exceed max_amount", "invalid_input")
             clauses, params = ["1=1"], []
             if run is not None:
                 clauses.append("e.run_id=?")
@@ -442,10 +704,37 @@ def create_app(db_path: str | Path | None = None, static_dir: str | Path | None 
             if status_filter:
                 clauses.append("e.status=?")
                 params.append(status_filter)
+            if assigned_to is not None:
+                clauses.append("e.assigned_to=?")
+                params.append(assigned_to)
+            if account:
+                clauses.append("l.account_code=?")
+                params.append(account)
+            if preparer:
+                clauses.append("l.preparer=?")
+                params.append(preparer)
+            if materiality_band:
+                clauses.append("e.materiality_band=?")
+                params.append(materiality_band)
+            if signal:
+                clauses.append("e.reasons_json LIKE ?")
+                params.append(f'%"{signal}"%')
+            if date_from is not None:
+                clauses.append("l.posting_date>=?")
+                params.append(date_from.isoformat())
+            if date_to is not None:
+                clauses.append("l.posting_date<=?")
+                params.append(date_to.isoformat())
+            if min_amount is not None:
+                clauses.append("l.signed_amount>=?")
+                params.append(min_amount)
+            if max_amount is not None:
+                clauses.append("l.signed_amount<=?")
+                params.append(max_amount)
             if search:
-                clauses.append("(l.entry_id LIKE ? OR l.description LIKE ? OR l.reference LIKE ?)")
+                clauses.append("(l.entry_id LIKE ? OR l.description LIKE ? OR l.reference LIKE ? OR l.account_code LIKE ? OR l.preparer LIKE ? OR l.vendor LIKE ? OR l.entity LIKE ?)")
                 pattern = f"%{search}%"
-                params.extend((pattern, pattern, pattern))
+                params.extend((pattern, pattern, pattern, pattern, pattern, pattern, pattern))
             where = " AND ".join(clauses)
             join = "FROM exceptions e JOIN ledger_entries l ON l.id=e.ledger_id LEFT JOIN coa c ON c.account_code=l.account_code"
             total = store.conn.execute(f"SELECT COUNT(*) {join} WHERE {where}", params).fetchone()[0]
@@ -567,12 +856,18 @@ def create_app(db_path: str | Path | None = None, static_dir: str | Path | None 
     def semantic_profile(request: Request, run: int | None = Query(None, gt=0)):
         store = concrete_store(request)
         try:
-            result = get_semantic_profile(store, run)
-            result["available_runs"] = [
+            available_runs = [
                 dict(row) for row in store.conn.execute(
                     "SELECT id,status,started_at FROM semantic_runs ORDER BY id DESC LIMIT 100"
                 )
             ]
+            if run is not None:
+                result = get_semantic_profile(store, run)
+            elif available_runs:
+                result = get_semantic_profile(store)
+            else:
+                result = {"available": False}
+            result["available_runs"] = available_runs
             return result
         finally:
             store.close()

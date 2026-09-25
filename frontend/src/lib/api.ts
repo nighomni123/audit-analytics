@@ -6,6 +6,7 @@ export class ApiError extends Error {
     readonly details?: unknown,
   ) {
     super(message);
+    this.name = "ApiError";
   }
 }
 
@@ -39,19 +40,19 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 }
 
 export function get<T>(path: string): Promise<T> {
-  return request<T>(path.startsWith("/") ? path : `/api/${path}`);
+  return request<T>(path);
 }
 
-export function post<T>(path: string, body: unknown): Promise<T> {
-  return request<T>(path.startsWith("/") ? path : `/api/${path}`, {
+export function post<T>(path: string, body?: unknown): Promise<T> {
+  return request<T>(path, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
+    body: body === undefined ? undefined : JSON.stringify(body),
   });
 }
 
 export function put<T>(path: string, body: unknown): Promise<T> {
-  return request<T>(path.startsWith("/") ? path : `/api/${path}`, {
+  return request<T>(path, {
     method: "PUT",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
@@ -63,7 +64,7 @@ export function upload<T>(path: string, form: FormData): Promise<T> {
 }
 
 export async function download(path: string, body: unknown, filename: string): Promise<void> {
-  const response = await fetch(`/api/${path}`, {
+  const response = await fetch(apiPath(path), {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),

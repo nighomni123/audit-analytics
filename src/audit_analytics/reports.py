@@ -34,7 +34,10 @@ def engagement_summary(store: Store):
         "latest_run": dict(store.conn.execute("SELECT * FROM model_runs ORDER BY id DESC LIMIT 1").fetchone() or {}),
         "exceptions": {r[0]: r[1] for r in store.conn.execute("SELECT severity,COUNT(*) FROM exceptions GROUP BY severity")},
         "review_status": {r[0]: r[1] for r in store.conn.execute("SELECT status,COUNT(*) FROM exceptions GROUP BY status")},
-        "sample_sets": [dict(r) for r in store.conn.execute("SELECT * FROM sample_sets ORDER BY id DESC")],
+        "sample_sets": [
+            {**dict(r), "method": json.loads(r["method_json"])}
+            for r in store.conn.execute("SELECT * FROM sample_sets ORDER BY id DESC")
+        ],
         "review_set": store.review_set_state(),
         "review_set_history": store.review_set_history(),
         "settings": {r[0]: json.loads(r[1]) for r in store.conn.execute("SELECT key,value_json FROM settings ORDER BY key")},

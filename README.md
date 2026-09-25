@@ -200,15 +200,16 @@ one with `save-mapping` for reuse across engagements.
 
 ## Quick start (user experience)
 
-1. Launch / open the workbench  
-2. Create/open an engagement  
-3. Import your client's GL  
-4. Confirm population (reconcile control totals)  
-5. Run analysis → see risk dashboard  
-6. Investigate selected entries → record disposition  
-7. Export workpaper / report
+1. Launch the workbench and choose **New Engagement** (or **Run Demo** for the synthetic onboarding path).
+2. Add the client GL from **Population**; preview the detected fields, confirm the mapping, and compare the supplied control totals.
+3. Open **Audit setup** to record planning materiality and the period-end window.
+4. Start a versioned **Analysis** run. The workbench shows the governed checks as they progress.
+5. Open **Risk cues** (Journal Entry Review), filter the queue, and select **Investigate** for the evidence and immutable review timeline.
+6. Record a disposition and assignment. High-priority clearances require the independent second-review control.
+7. Create a reproducible **Testing sample**, lock the review set, and generate the **Workpapers** package.
+8. Use **Audit trail** for source lineage, acknowledgements, analysis runs, reviews, lock/reopen events, and exports.
 
-The GUI binds to `localhost`; nothing uploads client data. See the [CLI / developer demo](#cli--developer-demo-synthetic-data-verified) for the current command-line equivalent.
+The GUI binds to `localhost`; nothing uploads client data. **Run Demo** uses only the repository's synthetic fixture. See the [CLI / developer demo](#cli--developer-demo-synthetic-data-verified) for the current command-line equivalent.
 
 ## Step-by-step: first engagement
 

@@ -38,11 +38,15 @@ export interface ImportRow {
   original_name: string;
   evidence_path: string;
   sha256: string;
+  imported_at?: number;
   accepted_rows: number;
   rejected_rows: number;
   acknowledged_at: number | null;
   acknowledged_by: string | null;
   acknowledgement_note: string | null;
+  reconciled_at?: number | null;
+  reconciled_by?: string | null;
+  reconciliation_note?: string | null;
   expected_rows: number | null;
   expected_debits: number | null;
   expected_credits: number | null;
@@ -59,7 +63,7 @@ export interface ModelRun {
   limitation_note: string | null;
   model_name: string | null;
   validation_status: string | null;
-  configuration: Record<string, unknown>;
+  configuration: Record<string, unknown> | string;
 }
 
 export interface ReviewSetState {
@@ -75,6 +79,16 @@ export interface ReviewSetEvent extends ReviewSetState {
   created_at: number;
 }
 
+export interface SampleSetSummary {
+  id: number;
+  run_id: number;
+  name: string;
+  method_json?: string;
+  method?: Record<string, unknown>;
+  created_at: number;
+  created_by: string;
+}
+
 export interface StatusSummary {
   engagement: Engagement | null;
   population_acknowledged: boolean;
@@ -84,6 +98,7 @@ export interface StatusSummary {
   latest_run: Partial<ModelRun>;
   exceptions: Record<string, number>;
   review_status: Record<string, number>;
+  sample_sets: SampleSetSummary[];
   review_set: ReviewSetState;
   review_set_history: ReviewSetEvent[];
   settings: {
@@ -96,6 +111,7 @@ export interface StatusSummary {
       overall?: number;
       performance?: number;
     };
+    [key: string]: unknown;
   };
 }
 
@@ -105,6 +121,16 @@ export interface PreviewResult {
   mapping: Record<string, string | null>;
   missing_required: string[];
   sample_rows: Record<string, string>[];
+  row_count?: number;
+}
+
+export interface ImportResult {
+  import_id: number;
+  accepted: number;
+  rejected: number;
+  debits: number;
+  credits: number;
+  reconciliation?: Reconciliation;
 }
 
 export interface ExceptionRow {
@@ -121,6 +147,7 @@ export interface ExceptionRow {
   evidence: Record<string, unknown>;
   entry_id: string;
   posting_date: string;
+  document_date?: string | null;
   account_code: string;
   account_name: string | null;
   debit: number;
@@ -129,7 +156,10 @@ export interface ExceptionRow {
   description: string | null;
   preparer: string | null;
   reference: string | null;
+  vendor?: string | null;
   entity: string | null;
+  is_manual?: number | null;
+  import_id: number;
   source_hash: string;
   source_row: number;
 }
@@ -201,4 +231,64 @@ export interface SimilarResult {
   score: number;
   shared_tokens: string[];
   token_classes: string[];
+}
+
+export interface SampleItem {
+  ledger_id: number;
+  rationale: string;
+  entry_id: string;
+  posting_date: string;
+  account_code: string;
+  account_name: string | null;
+  signed_amount: number;
+  description: string | null;
+  preparer: string | null;
+  reference: string | null;
+  entity: string | null;
+  vendor: string | null;
+  is_manual: number | null;
+  import_id: number;
+  source_row: number;
+  source_hash: string;
+  exception: {
+    id: number;
+    run_id: number;
+    risk_score: number;
+    severity: Severity;
+    status: Disposition;
+    materiality_band: string | null;
+    assigned_to: string | null;
+    due_date: string | null;
+    reasons: string[];
+    evidence: Record<string, unknown>;
+  } | null;
+}
+
+export interface SampleSetDetail {
+  id: number;
+  run_id: number;
+  name: string;
+  method: Record<string, unknown>;
+  created_at: number;
+  created_by: string;
+  item_count: number;
+  selected_count: number;
+  items: SampleItem[];
+  items_truncated: boolean;
+}
+
+export interface AuditLogEntry {
+  id: number;
+  created_at: number;
+  actor: string;
+  action: string;
+  target_type: string;
+  target_id: string;
+  detail: Record<string, unknown>;
+}
+
+export interface AuditLogPage {
+  rows: AuditLogEntry[];
+  limit: number;
+  offset: number;
 }

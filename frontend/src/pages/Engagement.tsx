@@ -3,15 +3,11 @@ import { useEffect, useState, type FormEvent } from "react";
 import { get, post } from "../lib/api";
 import { navigate } from "../lib/navigation";
 import type { EngagementState } from "../lib/types";
-import { Card, Loading, Message, PageHeader, formatDate } from "../components/ui";
+import { Button, Field, Message, Panel, TextInput, formatDate } from "../components/ui";
 
-export default function Engagement({
-  refresh,
-  revision,
-}: {
-  refresh: () => Promise<void>;
-  revision: number;
-}) {
+const setupSteps = ["Local workspace", "Client ledger", "Population", "Analysis", "Review", "Final package"];
+
+export default function Engagement({ refresh, onRemember }: { refresh: () => Promise<void>; onRemember?: (client: string, period: string) => void }) {
   const [state, setState] = useState<EngagementState | null>(null);
   const [client, setClient] = useState("");
   const [period, setPeriod] = useState("2025-04-01:2026-03-31");
@@ -20,70 +16,22 @@ export default function Engagement({
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    setState(null);
-    setError("");
+    setState(null); setError("");
     get<EngagementState>("/engagement").then(setState).catch((cause: Error) => setError(cause.message));
-  }, [revision]);
+  }, []);
 
   async function submit(event: FormEvent) {
-    event.preventDefault();
-    setSaving(true);
-    setError("");
+    event.preventDefault(); setSaving(true); setError("");
     try {
       await post("/engagement", { client, period, owner });
+      onRemember?.(client, period);
       await refresh();
       navigate("population");
-    } catch (cause) {
-      setError((cause as Error).message);
-    } finally {
-      setSaving(false);
-    }
+    } catch (cause) { setError(cause instanceof Error ? cause.message : "The engagement could not be created."); }
+    finally { setSaving(false); }
   }
 
-  if (!state && !error) return <Loading label="Loading engagement…" />;
+  if (!state && !error) return <div className="loading-page"><div className="spinner" />Opening engagement setup…</div>;
   const engagement = state?.engagement;
-
-  return (
-    <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
-      <PageHeader
-        title="Engagement"
-        description="The server is bound to one engagement database selected with serve --db. This screen creates or displays that engagement; it never changes databases from the browser."
-      />
-      {error && <div className="mb-5"><Message kind="error">{error}</Message></div>}
-      {engagement ? (
-        <>
-          <div className="grid gap-4 md:grid-cols-3">
-            <Card label="Client" value={engagement.client} />
-            <Card label="Audit period" value={`${formatDate(engagement.period_start)} – ${formatDate(engagement.period_end)}`} />
-            <Card label="Local folder" value={state?.folder ?? "—"} />
-          </div>
-          <div className="mt-6 flex flex-wrap gap-3">
-            <button className="rounded-lg bg-amber-500 px-4 py-2 font-semibold text-slate-950 hover:bg-amber-400" onClick={() => navigate("population")}>
-              Continue to population
-            </button>
-            <span className="self-center text-sm text-slate-500">Restart with another database using the CLI serve command.</span>
-          </div>
-        </>
-      ) : (
-        <form className="grid max-w-2xl gap-4" onSubmit={submit}>
-          <Message kind="info">Create the engagement before importing a client ledger.</Message>
-          <label className="grid gap-1 text-sm font-medium text-slate-700">
-            Client name
-            <input className="rounded-lg border border-slate-300 px-3 py-2" value={client} onChange={(event) => setClient(event.target.value)} required maxLength={200} />
-          </label>
-          <label className="grid gap-1 text-sm font-medium text-slate-700">
-            Audit period
-            <input className="rounded-lg border border-slate-300 px-3 py-2" value={period} onChange={(event) => setPeriod(event.target.value)} required pattern="\d{4}-\d{2}-\d{2}:\d{4}-\d{2}-\d{2}" />
-          </label>
-          <label className="grid gap-1 text-sm font-medium text-slate-700">
-            Local owner
-            <input className="rounded-lg border border-slate-300 px-3 py-2" value={owner} onChange={(event) => setOwner(event.target.value)} required maxLength={100} />
-          </label>
-          <button disabled={saving} className="w-fit rounded-lg bg-slate-900 px-5 py-2 font-semibold text-white disabled:opacity-50">
-            {saving ? "Creating…" : "Create engagement"}
-          </button>
-        </form>
-      )}
-    </section>
-  );
+  return <div className="setup-page"><div className="setup-header"><div><div className="eyebrow">ENGAGEMENT SETUP</div><h1>Start a local audit workspace</h1><p>Give the engagement a clear home. The ledger and evidence will be preserved beside this local database.</p></div><div className="setup-local-note"><span className="status-dot" />Local workspace</div></div><div className="setup-layout"><aside className="setup-progress"><div className="eyebrow">YOUR PATH</div><h2>Engagement setup</h2><ol>{setupSteps.map((step, index) => <li className={index === 0 ? "is-current" : ""} key={step}><span>{index === 0 ? "●" : "○"}</span>{step}</li>)}</ol><div className="setup-progress-note">You can return to any stage. Governance controls remain active throughout.</div></aside><Panel className="setup-form-card">{error && <Message kind="error">{error}</Message>}{engagement ? <div className="existing-engagement"><div className="eyebrow">CURRENT ENGAGEMENT</div><h2>{engagement.client}</h2><p>{formatDate(engagement.period_start)} — {formatDate(engagement.period_end)}</p><div className="existing-engagement-meta"><span>Local folder</span><strong>{state?.folder ?? "Local workspace"}</strong></div><Button variant="primary" onClick={() => navigate("population")}>Continue to population</Button></div> : <form className="setup-form" onSubmit={submit}><div className="form-intro"><span className="step-number">01</span><div><h2>Tell us about the engagement</h2><p>Use plain audit language. You can change the local workflow users later.</p></div></div><Field label="Client name" hint="The client or entity whose ledger you are reviewing."><TextInput value={client} onChange={(event) => setClient(event.target.value)} placeholder="e.g. Northstar Industries Ltd" required maxLength={200} autoFocus /></Field><Field label="Audit period" hint="Format: YYYY-MM-DD:YYYY-MM-DD"><TextInput value={period} onChange={(event) => setPeriod(event.target.value)} placeholder="2025-04-01:2026-03-31" required pattern="\d{4}-\d{2}-\d{2}:\d{4}-\d{2}-\d{2}" /></Field><Field label="Engagement owner" hint="This creates a local manager workflow user."><TextInput value={owner} onChange={(event) => setOwner(event.target.value)} placeholder="manager" required maxLength={100} /></Field><div className="setup-form-footer"><Button type="submit" variant="primary" size="lg" disabled={saving}>{saving ? "Creating workspace…" : "Create engagement"}</Button><span>Your data stays on this computer.</span></div></form>}</Panel></div></div>;
 }

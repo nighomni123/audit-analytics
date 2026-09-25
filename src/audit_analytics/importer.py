@@ -144,9 +144,11 @@ def preview_gl(filename: str, mapping=None, sample_size=10):
     _validate_source(source)
     iterator = _rows(source)
     sample = []
-    for _ in range(sample_size):
-        try: sample.append(next(iterator))
-        except StopIteration: break
+    row_count = 0
+    for raw in iterator:
+        row_count += 1
+        if len(sample) < sample_size:
+            sample.append(raw)
     headers = list(sample[0]) if sample else []
     inferred = {}
     for field, aliases in ALIASES.items():
@@ -154,7 +156,7 @@ def preview_gl(filename: str, mapping=None, sample_size=10):
         inferred[field] = explicit or next((h for h in headers if _key(h) in {_key(a) for a in aliases}), None)
     missing = [field for field in ("entry_id", "posting_date", "account_code") if not inferred[field]]
     if not inferred["amount"] and not (inferred["debit"] and inferred["credit"]): missing.append("amount or debit+credit")
-    return {"file": source.name, "headers": headers, "mapping": inferred, "missing_required": missing, "sample_rows": sample}
+    return {"file": source.name, "headers": headers, "mapping": inferred, "missing_required": missing, "sample_rows": sample, "row_count": row_count}
 
 
 def import_gl(
