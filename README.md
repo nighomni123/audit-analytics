@@ -120,6 +120,17 @@ python3 run.py embed-ledger --db engagements/example-ltd-fy26/audit.db --model e
 python3 run.py similar --db engagements/example-ltd-fy26/audit.db --query "GST liability provision" --limit 25
 ```
 
+By default this stays local. You can instead point embeddings at any
+OpenAI-compatible `/embeddings` provider (OpenRouter, OpenAI, or a local vLLM
+server) from **Methodology → External embedding provider** in the UI, by entering
+the base URL, model, and API key, then **Test connection** to verify it. That path
+is **off by default, requires a manager/partner to confirm that ledger text may
+leave this host, and is audit-logged.** The API key is saved to a `.env` file next
+to the engagement database (never into the database itself) and is never returned
+to the browser. This is a genuine change to this tool's "nothing leaves your
+machine" boundary — use it only where engagement and firm policy allow. See
+[`docs/SEMANTIC_ENGINE.md`](docs/SEMANTIC_ENGINE.md) §4.1.
+
 ### 5) Tests
 
 ```sh

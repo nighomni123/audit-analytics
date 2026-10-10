@@ -4,7 +4,7 @@ Audience: developer / researcher. Permanent reference, not a build checklist.
 
 ## 1. Purpose
 
-Add an optional, reproducible, explainable semantic layer to the local audit analytics pipeline (`audit_analytics`). It must never suppress lexical search (`max(token, cosine)`), never infer fraud, never issue an opinion, and must stay fully local (same-host Ollama only; no external embeddings, no cloud LLM, no vector database). The exact local search path uses the declared NumPy dependency; semantic-risk candidate selection remains bounded and disclosed.
+Add an optional, reproducible, explainable semantic layer to the local audit analytics pipeline (`audit_analytics`). It must never suppress lexical search (`max(token, cosine)`), never infer fraud, never issue an opinion, and must stay fully local (same-host Ollama only; no external LLM, no vector database) by default. The default local path uses the declared NumPy dependency; semantic-risk candidate selection remains bounded and disclosed. An explicit, per-engagement, acknowledged exception may route embeddings through any OpenAI-compatible `/embeddings` provider (see §4.1); that exception is opt-in, off by default, and changes the confidentiality boundary.
 
 Scope: narration-only embeddings (no account code, label, vendor/preparer identifier, amount, or date leakage); versioned semantic profiles; deterministic clustering; explainable cues; offline label-based evaluation; investigation UI; zero-cue evidence retention.
 
@@ -56,6 +56,16 @@ Storage: float32 byte-order explicit; exact text/template/digest match required 
 ## 4. Embedding methodology
 
 - **Transport:** local `Ollama` (`embeddinggemma` default; `nomic-embed-text` fast baseline; `mxbai-embed-large` pilot candidate) via restricted loopback transport. No external proxies, no redirects, no pulls.
+
+### 4.1 Optional external embedding provider (opt-in, acknowledged)
+
+- **Default is unchanged.** With no provider configured, `resolve_embedder` returns the loopback-locked `LocalEmbedder`. The local-only default and its `LocalEmbedder` guard are never weakened; the external path is a separate `RemoteEmbedder` class.
+- **Enablement:** manager/partner only, via the Methodology page or `PUT /api/semantic-provider`. Enabling requires an explicit `acknowledge_external_transfer` confirmation and is recorded (`acknowledged_at`/`acknowledged_by`) and audit-logged without the secret. Off by default, per engagement.
+- **Transport:** OpenAI-compatible `POST {base_url}/embeddings` with `Authorization: Bearer`; optional `HTTP-Referer` and `X-OpenRouter-Title` (OpenRouter) headers. Works with OpenRouter, OpenAI, and local vLLM/LM Studio. No proxies, no redirects (a credentialed request is never replayed). Base URL must be `https` unless it is loopback.
+- **Provenance (weaker by construction).** Remote providers publish no content digest, so model identity is a *declared* tuple (`provider|base_url|model`), not an immutable content hash. Mid-run settings changes are still detected, but a silent upstream model swap is not. Runs record `provenance_kind: declared_endpoint`; treat cross-run comparisons as weaker than local-digest runs.
+- **Secret handling:** the API key is **never** written to the engagement database. It lives in a `.env` file beside the database (variable `AUDIT_ANALYTICS_PROVIDER_API_KEY`, written `chmod 600`, git-ignored) or a real environment variable, which takes precedence. This keeps the credential out of the engagement `.db`, which is an audit workpaper that gets archived, copied, and shared. A blank key on update keeps the stored one, so the secret never round-trips through the browser. It is still plaintext at rest — `.env` is hygiene, not encryption. Do not commit the engagement `.db` or the `.env`; both are already git-ignored.
+- **Connection test:** `POST /api/semantic-provider/test` (and the **Test connection** button) sends a single fixed probe string — never client data — to verify the base URL, key, model, and returned dimensions, and reports latency. It is read-only and does not enable the provider.
+- **Confidentiality:** when enabled, the embedded text (ledger narration and the similarity fields) is transmitted to the provider and stored there under the account owner's provider key. This is a genuine change from "nothing leaves your machine" and requires engagement-owner and firm-policy sign-off.
 - **Digest resolution:** resolve installed local digest before and after embedding; fail closed on unavailable/changed identity; no automatic model pulls or updates.
 - **Template:** narration-only (`normalized_line_text`). Exclude account/name/vendor/preparer/reference/amount/date. Include account code / narration / optional COA account name / description / reference / entity only as structured context (not embedded).
 - **Batching:** positive batch size validated; consistent-dimensional, non-empty, non-zero, finite vectors checked at shared boundaries.

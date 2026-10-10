@@ -51,7 +51,7 @@ python scripts/run_benchmark.py --only-import --sizes 10000,50000,100000
 
 The full `scripts/run_benchmark.py` harness also expects local `uv`, Node/frontend tooling, and optional browser tooling; use the focused scripts when those dependencies are unavailable. Record the dataset hash, seed, code version, dependency versions, accelerator, runtime, and result artifacts. Compare Kaggle and local runs with the same inputs and configuration.
 
-The production `LocalEmbedder` remains loopback-only. A Kaggle GPU embedding experiment must use a notebook-specific adapter or precomputed vectors; do not weaken the production endpoint check. Synthetic fixtures are the default. Any real-data experiment requires explicit firm approval and a separately reviewed private environment.
+The production `LocalEmbedder` remains loopback-only. A Kaggle GPU embedding experiment must use a notebook-specific adapter or precomputed vectors; do not weaken the production endpoint check. (A separate, opt-in, acknowledged `RemoteEmbedder` now exists for OpenAI-compatible `/embeddings` providers — it is a distinct class, is off by default, and never relaxes the `LocalEmbedder` guard; see `docs/SEMANTIC_ENGINE.md` §4.1.) Synthetic fixtures are the default. Any real-data experiment requires explicit firm approval and a separately reviewed private environment.
 
 ## Ponytail — lazy senior dev mode (installed, applies to every project here)
 
