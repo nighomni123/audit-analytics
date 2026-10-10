@@ -40,3 +40,5 @@ frontend/blob-report/
 build/
 dist/
 *.egg-info/
+.DS_Store
+benchmark-results/
