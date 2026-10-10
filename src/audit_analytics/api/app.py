@@ -33,7 +33,7 @@ from audit_analytics.importer import (
 from audit_analytics.model_registry import list_models
 from audit_analytics.reports import compare_runs, engagement_summary, export_workpaper, write_engagement_report
 from audit_analytics.sampling import create_sample
-from audit_analytics.semantic import similar_transactions
+from audit_analytics.semantic import RemoteEmbedder, similar_transactions
 from audit_analytics.semantic_risk import get_semantic_profile, semantic_investigate
 from audit_analytics.store import Store
 from audit_analytics.workflow import (
@@ -80,6 +80,26 @@ class ConfigBody(StrictModel):
     round_amount_threshold: float | None = Field(default=None, ge=0)
     period_end_days: int | None = Field(default=None, ge=0, le=366)
     outlier_robust_z: float | None = Field(default=None, gt=0)
+
+
+class SemanticProviderBody(StrictModel):
+    actor: str = Field(min_length=1, max_length=100)
+    enabled: bool = False
+    base_url: str = Field(default="", max_length=500)
+    api_key: str = Field(default="", max_length=500)
+    model: str = Field(default="", max_length=200)
+    referer: str = Field(default="", max_length=500)
+    title: str = Field(default="", max_length=200)
+    acknowledge_external_transfer: bool = False
+
+
+class SemanticProviderTestBody(StrictModel):
+    actor: str = Field(min_length=1, max_length=100)
+    base_url: str = Field(default="", max_length=500)
+    api_key: str = Field(default="", max_length=500)
+    model: str = Field(default="", max_length=200)
+    referer: str = Field(default="", max_length=500)
+    title: str = Field(default="", max_length=200)
 
 
 class AnalysisBody(StrictModel):
@@ -849,6 +869,80 @@ def create_app(db_path: str | Path | None = None, static_dir: str | Path | None 
         store = concrete_store(request)
         try:
             return {"query": q, "results": similar_transactions(store, q, limit)}
+        finally:
+            store.close()
+
+    def _redact_provider(store, config: dict | None) -> dict:
+        """Never return the secret. The client can only ever see that a key is available."""
+        if not config:
+            return {"configured": False, "provider": "ollama", "enabled": False}
+        key = store.provider_api_key()
+        return {
+            "configured": True,
+            "provider": "openai_compatible",
+            "enabled": bool(config.get("enabled")),
+            "base_url": config.get("base_url", ""),
+            "model": config.get("model", ""),
+            "referer": config.get("referer") or "",
+            "title": config.get("title") or "",
+            "has_api_key": bool(key),
+            "api_key_hint": f"...{key[-4:]}" if len(key) >= 8 else ("set" if key else ""),
+            "key_source": "env_file" if key else "",
+            "acknowledged_at": config.get("acknowledged_at"),
+            "acknowledged_by": config.get("acknowledged_by"),
+            "updated_at": config.get("updated_at"),
+            "updated_by": config.get("updated_by"),
+        }
+
+    @app.get("/api/semantic-provider")
+    def semantic_provider_get(request: Request):
+        store = concrete_store(request)
+        try:
+            return _redact_provider(store, store.semantic_provider())
+        finally:
+            store.close()
+
+    @app.post("/api/semantic-provider/test")
+    def semantic_provider_test(body: SemanticProviderTestBody, request: Request):
+        store = concrete_store(request)
+        try:
+            require_role(store, body.actor, MANAGER_ROLES)
+            api_key = body.api_key.strip() or store.provider_api_key()
+            started = time.time()
+            embedder = RemoteEmbedder(body.base_url, api_key, body.model, body.referer, body.title)
+            vectors = embedder.embed(["connection test"])
+            return {"ok": True, "dimensions": len(vectors[0]),
+                    "latency_ms": round((time.time() - started) * 1000, 1),
+                    "model": embedder.model}
+        finally:
+            store.close()
+
+    @app.put("/api/semantic-provider")
+    def semantic_provider_update(body: SemanticProviderBody, request: Request):
+        store = concrete_store(request)
+        try:
+            actor = require_role(store, body.actor, MANAGER_ROLES)
+            if not store.engagement():
+                raise WorkflowError("engagement not found", "not_found", 404)
+            # A blank key keeps the stored one, so the secret never round-trips through the client.
+            api_key = body.api_key.strip() or store.provider_api_key()
+            if body.enabled and not body.acknowledge_external_transfer:
+                raise WorkflowError(
+                    "confirm that ledger text may leave this host before enabling an external embedding provider",
+                    "acknowledgement_required", 400,
+                )
+            if body.enabled or body.base_url or body.model:
+                # Constructing the embedder is the single trust-boundary validation for these fields.
+                RemoteEmbedder(body.base_url, api_key, body.model, body.referer, body.title)
+            store.set_semantic_provider({
+                "provider": "openai_compatible", "base_url": body.base_url.strip(), "api_key": api_key,
+                "model": body.model.strip(), "referer": body.referer.strip(), "title": body.title.strip(),
+                "enabled": body.enabled,
+                "acknowledged_at": time.time() if body.enabled and body.acknowledge_external_transfer else None,
+                "acknowledged_by": actor if body.enabled and body.acknowledge_external_transfer else None,
+            }, actor)
+            store.conn.commit()
+            return _redact_provider(store, store.semantic_provider())
         finally:
             store.close()
 
