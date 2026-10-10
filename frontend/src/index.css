@@ -70,6 +70,7 @@ code, pre { font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospac
 .field-hint { color: var(--ink-muted); }
 .field-error { color: var(--red); }
 .form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+.form-grid.one { grid-template-columns: minmax(0, 1fr); }
 .form-grid.three { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 .checkbox-row { display: flex; align-items: flex-start; gap: 9px; color: var(--ink-soft); font-size: 12px; line-height: 1.45; cursor: pointer; }
 .checkbox-row input { width: 16px; height: 16px; flex: 0 0 auto; margin: 1px 0 0; accent-color: var(--indigo); }
@@ -445,6 +446,7 @@ kbd { border: 1px solid var(--line-strong); border-bottom-width: 2px; border-rad
 .helper-strip p { font-size: 11px; line-height: 1.55; }
 .advanced-content { display: grid; gap: 17px; }
 .methodology-actions { display: flex; flex-wrap: wrap; gap: 10px; }
+.provider-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 20px; }
 .methodology-side { display: grid; gap: 14px; }
 .semantic-setup-card { background: #fbfaff; }
 .semantic-setup-card h2 { margin-top: 7px; font-size: 18px; }
