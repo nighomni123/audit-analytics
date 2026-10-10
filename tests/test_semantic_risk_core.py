@@ -5,6 +5,7 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
+from audit_analytics import semantic as sem
 from audit_analytics import semantic_risk as sr
 from audit_analytics.semantic import embed_ledger
 from audit_analytics.store import Store
@@ -54,7 +55,7 @@ def make_store(d, rows):
 
 
 def run_profile(store, **kw):
-    with patch.object(sr, 'LocalEmbedder', FakeEmbedder), \
+    with patch.object(sem, 'LocalEmbedder', FakeEmbedder), \
          patch.object(sr, 'list_models', lambda s: [{'name': 'embeddinggemma', 'status': 'validated'}]):
         FakeEmbedder.instances.clear()
         return sr.semantic_profile(store, actor='reviewer', **kw)
@@ -135,7 +136,7 @@ class CoreTest(unittest.TestCase):
             self.assertEqual(len(prof['summary']['clusters']), 1)
             # empty population of vectors: all missing narration
             s2 = make_store(tempfile.mkdtemp(), [{'date': '2025-03-01', 'acct': '6000', 'desc': ''}])
-            with patch.object(sr, 'LocalEmbedder', FakeEmbedder), patch.object(sr, 'list_models', lambda s: []):
+            with patch.object(sem, 'LocalEmbedder', FakeEmbedder), patch.object(sr, 'list_models', lambda s: []):
                 p2 = sr.semantic_profile(s2, actor='reviewer')
                 self.assertEqual(p2['summary']['eligible_count'], 0)
                 self.assertEqual(p2['summary']['clusters'], [])
@@ -150,7 +151,7 @@ class CoreTest(unittest.TestCase):
             VECTORS['it advisory services'] = [float('nan'), 0.0, 0.0]
             s_bad = make_store(tempfile.mkdtemp(), BASE_ROWS)
             try:
-                with patch.object(sr, 'LocalEmbedder', FakeEmbedder), patch.object(sr, 'list_models', lambda s: []):
+                with patch.object(sem, 'LocalEmbedder', FakeEmbedder), patch.object(sr, 'list_models', lambda s: []):
                     FakeEmbedder.instances.clear()
                     with self.assertRaises(ValueError):
                         sr.semantic_profile(s_bad, actor='reviewer')
@@ -165,7 +166,7 @@ class CoreTest(unittest.TestCase):
             self.assertEqual(prof2['summary']['cached_count'], prof2['summary']['eligible_count'])
             self.assertEqual(prof2['summary']['embedded_count'], 0)
             # digest change invalidates cache
-            with patch.object(sr, 'LocalEmbedder', FakeEmbedder), patch.object(sr, 'list_models', lambda s: []):
+            with patch.object(sem, 'LocalEmbedder', FakeEmbedder), patch.object(sr, 'list_models', lambda s: []):
                 FakeEmbedder.instances.clear()
                 with patch.object(FakeEmbedder, 'identity', lambda self: {'digest': 'sha256:other', 'name': self.model, 'runtime_version': 't'}):
                     prof3 = sr.semantic_profile(s, actor='reviewer')
