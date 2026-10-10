@@ -966,6 +966,15 @@ def create_app(db_path: str | Path | None = None, static_dir: str | Path | None 
         finally:
             store.close()
 
+    @app.get("/api/investigation-context")
+    def investigation_context_route(request: Request, run: int = Query(..., gt=0), ledger_id: int = Query(..., gt=0)):
+        from audit_analytics.investigation_context import investigation_context
+        store = concrete_store(request)
+        try:
+            return investigation_context(store, run, ledger_id)
+        finally:
+            store.close()
+
     @app.get("/api/semantic-investigation")
     def semantic_investigation(request: Request, run: int = Query(..., gt=0), ledger_id: int = Query(..., gt=0)):
         store = concrete_store(request)
