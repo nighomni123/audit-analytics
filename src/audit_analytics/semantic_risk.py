@@ -9,7 +9,7 @@ import time
 import tracemalloc
 from collections import defaultdict
 
-from .semantic import LocalEmbedder, _entries, _cosine, classify, tokens
+from .semantic import LocalEmbedder, _entries, _cosine, classify, tokens, resolve_embedder
 from .model_registry import list_models
 
 ENGINE_VERSION = 'semantic-risk-v1'
@@ -226,7 +226,7 @@ def semantic_profile(store,model='embeddinggemma',batch_size=64,actor='system',c
     tracing=not tracemalloc.is_tracing()
     if tracing: tracemalloc.start()
     try:
-        embedder=LocalEmbedder(model); identity=embedder.identity()
+        embedder, model = resolve_embedder(store, model); identity=embedder.identity()
         registry=[r for r in list_models(store) if r['name']==model]
         provenance={'model':model,'digest':identity['digest'],'runtime':identity,'template_version':TEMPLATE_VERSION,'engine_version':ENGINE_VERSION,'serialization':'little-endian float32','registry_snapshot':registry,'validation_status':registry[0]['status'] if registry else 'unregistered','input_hashes':[dict(r) for r in store.conn.execute('SELECT id,sha256 FROM imports ORDER BY id')]}
         cache={}

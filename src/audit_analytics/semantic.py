@@ -56,6 +56,29 @@ class _NoRedirect(urllib.request.HTTPRedirectHandler):
         raise ValueError("local Ollama redirects are prohibited")
 
 
+def _validate_batch(vectors, expected: int) -> list[array.array]:
+    """Shared float32/finite/dimension validation. Fails closed on any malformed batch."""
+    if not isinstance(vectors, list) or len(vectors) != expected:
+        raise ValueError("embedding provider returned an invalid batch size")
+    result = []
+    dims = None
+    for vector in vectors:
+        if not isinstance(vector, list) or not vector or any(
+            isinstance(x, bool) or not isinstance(x, (int, float)) or not math.isfinite(x) for x in vector
+        ):
+            raise ValueError("invalid embedding vector")
+        if dims is not None and len(vector) != dims:
+            raise ValueError("mixed embedding dimensions")
+        dims = len(vector)
+        try:
+            converted = array.array('f', vector)
+        except (OverflowError, TypeError) as exc:
+            raise ValueError("invalid float32 embedding") from exc
+        _cosine(converted, converted)
+        result.append(converted)
+    return result
+
+
 class LocalEmbedder:
     """Minimal local Ollama transport. No API key and no external endpoint."""
     def __init__(self, model="embeddinggemma", base_url="http://127.0.0.1:11434"):
@@ -82,21 +105,99 @@ class LocalEmbedder:
         matches = [m for m in data.get('models',[]) if m.get('name') in names or m.get('model') in names]
         if len(matches)!=1 or not isinstance(matches[0].get('digest'),str) or not matches[0]['digest']:
             raise ValueError('cannot resolve immutable installed Ollama model identity')
-        return {**matches[0], 'runtime_version': self._request('/api/version').get('version')}
+        return {**matches[0], 'runtime_version': self._request('/api/version').get('version'), 'provider': 'ollama', 'provenance_kind': 'content_digest'}
 
     def embed(self, texts: list[str]) -> list[array.array]:
         data = self._request('/api/embed', {"model": self.model, "input": texts, "truncate": False})
-        vectors = data.get("embeddings") if isinstance(data,dict) else None
-        if not isinstance(vectors, list) or len(vectors) != len(texts): raise ValueError("local Ollama returned an invalid embedding batch")
-        result=[]; dims=None
-        for vector in vectors:
-            if not isinstance(vector,list) or not vector or any(isinstance(x,bool) or not isinstance(x,(int,float)) or not math.isfinite(x) for x in vector): raise ValueError('invalid embedding vector')
-            if dims is not None and len(vector)!=dims: raise ValueError('mixed embedding dimensions')
-            dims=len(vector)
-            try: converted=array.array('f',vector)
-            except (OverflowError,TypeError) as exc: raise ValueError('invalid float32 embedding') from exc
-            _cosine(converted,converted); result.append(converted)
-        return result
+        return _validate_batch(data.get("embeddings") if isinstance(data, dict) else None, len(texts))
+
+
+class RemoteEmbedder:
+    """OpenAI-compatible `/embeddings` transport (OpenRouter, OpenAI, vLLM, LM Studio...).
+
+    A deliberate exception to the local-only default: enabling it sends ledger text to a third
+    party. Kept as its own class so `LocalEmbedder`'s loopback guard is never weakened.
+    """
+
+    def __init__(self, base_url: str, api_key: str, model: str, referer: str = "", title: str = ""):
+        if not isinstance(model, str) or not model.strip():
+            raise ValueError('model name required')
+        parsed = urlparse(base_url)
+        try:
+            local = ipaddress.ip_address(parsed.hostname or '').is_loopback
+        except ValueError:
+            local = False
+        if not parsed.hostname or parsed.username or parsed.password or parsed.query or parsed.fragment:
+            raise ValueError('provider base URL must be a plain origin without credentials, query, or fragment')
+        if parsed.scheme != 'https' and not (parsed.scheme == 'http' and local):
+            raise ValueError('provider base URL must use https unless it is a loopback address')
+        if not isinstance(api_key, str) or not api_key.strip():
+            raise ValueError('provider API key is required')
+        for value in (api_key, model, referer, title):
+            if not isinstance(value, str) or any(c in value for c in '\r\n'):
+                raise ValueError('provider credentials, model, and headers must be single-line values')
+        self.base_url, self.api_key, self.model = base_url.rstrip('/'), api_key, model
+        self.referer, self.title = referer, title
+
+    def _headers(self) -> dict:
+        headers = {"Content-Type": "application/json", "Authorization": f"Bearer {self.api_key}"}
+        if self.referer:
+            headers["HTTP-Referer"] = self.referer
+        if self.title:
+            headers["X-OpenRouter-Title"] = self.title
+        return headers
+
+    def _request(self, path, payload=None):
+        body = json.dumps(payload).encode() if payload is not None else None
+        request = urllib.request.Request(self.base_url + path, data=body, headers=self._headers())
+        try:
+            # No proxies and no redirects: a credentialed request must never be replayed elsewhere.
+            opener = urllib.request.build_opener(urllib.request.ProxyHandler({}), _NoRedirect())
+            with opener.open(request, timeout=180) as response:
+                return json.loads(response.read().decode())
+        except urllib.error.HTTPError as exc:
+            # Surface the provider's reason, never the request: it carries the API key.
+            detail = ''
+            try:
+                detail = str(json.loads(exc.read().decode()).get('error', {}).get('message', ''))[:200]
+            except Exception:  # noqa: BLE001 - provider response bodies are untrusted
+                pass
+            raise ValueError(f'provider request failed with HTTP {exc.code}{": " + detail if detail else ""}') from None
+        except (urllib.error.URLError, OSError, json.JSONDecodeError) as exc:
+            raise ValueError('provider request failed; check the base URL, API key, and model name') from exc
+
+    def identity(self):
+        # Remote providers publish no content digest, so identity is a declared tuple. Callers that
+        # compare digests still catch a mid-run settings change, but not a silent upstream model swap.
+        return {'provider': 'openai_compatible', 'model': self.model, 'base_url': self.base_url,
+                'digest': hashlib.sha256(f'openai_compatible|{self.base_url}|{self.model}'.encode()).hexdigest(),
+                'provenance_kind': 'declared_endpoint'}
+
+    def embed(self, texts: list[str]) -> list[array.array]:
+        data = self._request('/embeddings', {"model": self.model, "input": texts, "encoding_format": "float"})
+        # OpenAI/OpenRouter nest vectors under data[].embedding and may return them out of order.
+        rows = data.get("data") if isinstance(data, dict) else None
+        if not isinstance(rows, list):
+            raise ValueError("embedding provider returned an invalid batch")
+        try:
+            ordered = sorted(rows, key=lambda row: row["index"])
+            return _validate_batch([row["embedding"] for row in ordered], len(texts))
+        except (TypeError, KeyError) as exc:
+            raise ValueError("embedding provider returned a malformed batch") from exc
+
+
+def resolve_embedder(store: Store, model: str | None = None):
+    """The single place that decides which embedder runs. Returns (embedder, model).
+
+    A configured, acknowledged remote provider takes precedence over `model`; the caller records
+    in provenance whichever one actually ran.
+    """
+    config = store.semantic_provider()
+    if config and config.get('enabled'):
+        embedder = RemoteEmbedder(config['base_url'], store.provider_api_key(), config['model'],
+                                  config.get('referer') or '', config.get('title') or '')
+        return embedder, embedder.model
+    return LocalEmbedder(model or 'embeddinggemma'), (model or 'embeddinggemma')
 
 
 def _entries(store: Store):
@@ -104,10 +205,10 @@ def _entries(store: Store):
         LEFT JOIN coa c ON c.account_code=l.account_code ORDER BY l.id""")]
 
 
-def embed_ledger(store: Store, model="embeddinggemma", batch_size=64, actor="system"):
-    """Backfill locally generated vectors; unchanged text is never re-embedded."""
+def embed_ledger(store: Store, model=None, batch_size=64, actor="system"):
+    """Backfill vectors; unchanged text is never re-embedded."""
     if isinstance(batch_size,bool) or not isinstance(batch_size,int) or batch_size<=0: raise ValueError('batch_size must be positive')
-    embedder = LocalEmbedder(model); todo = []
+    embedder, model = resolve_embedder(store, model); todo = []
     for entry in _entries(store):
         text = _text(entry); digest = hashlib.sha256(text.encode()).hexdigest()
         row = store.conn.execute("SELECT text_hash FROM ledger_embeddings WHERE ledger_id=? AND model=? ORDER BY embedded_at DESC LIMIT 1", (entry["id"], model)).fetchone()
@@ -127,7 +228,7 @@ def embed_ledger(store: Store, model="embeddinggemma", batch_size=64, actor="sys
     store.conn.commit(); return done
 
 
-def similar_transactions(store: Store, query: str, limit=25, model="embeddinggemma"):
+def similar_transactions(store: Store, query: str, limit=25, model=None):
     """Rank ledger candidates with token overlap plus optional local cosine.
 
     Embedding similarity can add semantically related candidates, but never
@@ -148,13 +249,14 @@ def similar_transactions(store: Store, query: str, limit=25, model="embeddinggem
     doc_freq = Counter(token for _, _, entry_tokens in prepared for token in entry_tokens)
     n = max(1, len(rows))
     semantic_scores = {}
+    embedder, model = resolve_embedder(store, model)
     embedded = store.conn.execute("SELECT dims FROM ledger_embeddings WHERE model=? LIMIT 1", (model,)).fetchone()
     if embedded:
         dims = embedded[0]
         vector_rows = store.conn.execute(
             "SELECT ledger_id,vector FROM ledger_embeddings WHERE model=? AND dims=? ORDER BY ledger_id", (model, dims)
         ).fetchall()
-        query_vector = LocalEmbedder(model).embed([query])[0]
+        query_vector = embedder.embed([query])[0]
         if len(query_vector) != dims:
             raise ValueError("local model dimensions changed; rerun embed-ledger for this model")
         if vector_rows:

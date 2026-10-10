@@ -1,12 +1,17 @@
 from __future__ import annotations
 
 import json
+import os
+import re
 import sqlite3
 import time
 from pathlib import Path
 
 
 SCHEMA_VERSION = 1
+
+# The provider secret lives here, in the engagement's sibling .env (or a real env var) — never in the db.
+PROVIDER_KEY_ENV = "AUDIT_ANALYTICS_PROVIDER_API_KEY"
 
 SCHEMA = """
 PRAGMA foreign_keys=ON;
@@ -32,6 +37,12 @@ CREATE TABLE IF NOT EXISTS users (
 );
 CREATE TABLE IF NOT EXISTS settings (
   key TEXT PRIMARY KEY, value_json TEXT NOT NULL, updated_at REAL NOT NULL, updated_by TEXT NOT NULL
+);
+-- Keeps no secret: the API key lives in a sibling .env so the engagement db stays safe to archive/share.
+CREATE TABLE IF NOT EXISTS semantic_provider (
+  id INTEGER PRIMARY KEY CHECK(id=1), provider TEXT NOT NULL, base_url TEXT NOT NULL,
+  api_key TEXT NOT NULL DEFAULT '', model TEXT NOT NULL, referer TEXT, title TEXT, enabled INTEGER NOT NULL DEFAULT 0,
+  acknowledged_at REAL, acknowledged_by TEXT, updated_at REAL NOT NULL, updated_by TEXT NOT NULL
 );
 CREATE TABLE IF NOT EXISTS review_set_events (
   id INTEGER PRIMARY KEY, event TEXT NOT NULL CHECK(event IN ('locked','reopened')),
@@ -232,6 +243,72 @@ class Store:
     def get_setting(self, key: str, default=None):
         row = self.conn.execute("SELECT value_json FROM settings WHERE key=?", (key,)).fetchone()
         return json.loads(row[0]) if row else default
+
+    def semantic_provider(self) -> dict | None:
+        """The configured remote embedding provider (no secret). Safe to serialise after redaction."""
+        row = self.conn.execute("SELECT * FROM semantic_provider WHERE id=1").fetchone()
+        return dict(row) if row else None
+
+    def _env_path(self) -> Path:
+        return self.path.parent / ".env"
+
+    def _read_env(self) -> dict:
+        path = self._env_path()
+        if not path.exists():
+            return {}
+        values = {}
+        for line in path.read_text(encoding="utf-8", errors="replace").splitlines():
+            line = line.strip()
+            if not line or line.startswith("#") or "=" not in line:
+                continue
+            key, _, value = line.partition("=")
+            value = value.strip()
+            if len(value) >= 2 and value[0] == value[-1] and value[0] in "\"'":
+                value = value[1:-1]
+            values[key.strip()] = value
+        return values
+
+    def provider_api_key(self) -> str:
+        """The secret, read live from the sibling .env (or a real environment variable). Never persisted here."""
+        return (os.environ.get(PROVIDER_KEY_ENV) or self._read_env().get(PROVIDER_KEY_ENV) or "").strip()
+
+    def _write_env_key(self, key: str, value: str):
+        path = self._env_path()
+        lines = path.read_text(encoding="utf-8").splitlines() if path.exists() else []
+        quoted = '"%s"' % value.replace("\\", "\\\\").replace('"', '\\"') if re.search(r'[\s#"\'\\]', value) else value
+        replaced = False
+        out = []
+        for line in lines:
+            if not replaced and line.strip().startswith(key + "="):
+                out.append(f"{key}={quoted}"); replaced = True
+            else:
+                out.append(line)
+        if not replaced:
+            out.append(f"{key}={quoted}")
+        path.write_text("\n".join(out) + "\n", encoding="utf-8")
+        try:
+            path.chmod(0o600)
+        except OSError:
+            pass
+
+    def set_semantic_provider(self, values: dict, actor: str):
+        self.conn.execute(
+            """INSERT INTO semantic_provider(id,provider,base_url,api_key,model,referer,title,enabled,
+                 acknowledged_at,acknowledged_by,updated_at,updated_by)
+               VALUES(1,?,?,'',?,?,?,?,?,?,?,?)
+               ON CONFLICT(id) DO UPDATE SET provider=excluded.provider, base_url=excluded.base_url,
+                 api_key='', model=excluded.model, referer=excluded.referer, title=excluded.title,
+                 enabled=excluded.enabled, acknowledged_at=excluded.acknowledged_at,
+                 acknowledged_by=excluded.acknowledged_by, updated_at=excluded.updated_at, updated_by=excluded.updated_by""",
+            (values["provider"], values["base_url"], values["model"], values.get("referer"),
+             values.get("title"), int(values["enabled"]), values.get("acknowledged_at"), values.get("acknowledged_by"),
+             time.time(), actor),
+        )
+        if values.get("api_key"):
+            self._write_env_key(PROVIDER_KEY_ENV, values["api_key"])
+        self.log(actor, "set_semantic_provider", "semantic_provider", "openai_compatible",
+                 {"base_url": values["base_url"], "model": values["model"], "enabled": int(values["enabled"]),
+                  "key_source": "env_file" if values.get("api_key") else "unchanged"})
 
     def existing_import(self, kind: str, sha256: str):
         return self.conn.execute(
