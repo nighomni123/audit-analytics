@@ -372,7 +372,7 @@ class InvestigationIntegrationTests(unittest.TestCase):
         else:
             semantic_run_id, _ = _inject_semantic_fixture(
                 b.store,
-                {b.fixture_entry_ids()[14]: b.ledger_id_for("JE015"),
+                {b.fixture_entry_ids()[14]: self.b.ledger_id_for("JE015"),
                  b.fixture_entry_ids()[23]: b.ledger_id_for("JE024")},
             )
 
@@ -390,7 +390,7 @@ class InvestigationIntegrationTests(unittest.TestCase):
         ).fetchall()
         self.assertGreater(len(ex), 0)
 
-        semantic_ledger_id = b.ledger_id_for("JE015")
+        semantic_ledger_id = self.b.ledger_id_for("JE015")
         ctx = investigation_context(
             b.store, linked_run_id, semantic_ledger_id, semantic_run_id,
         )
