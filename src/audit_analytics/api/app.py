@@ -985,7 +985,10 @@ def create_app(db_path: str | Path | None = None, static_dir: str | Path | None 
             except _UnauthenticatedError as exc:
                 return _error("not_found", str(exc), 404)
             except InvestigationContextError as exc:
-                return _error("invalid_input", str(exc), 400)
+                msg = str(exc)
+                if "stale" in msg.lower() or "population_hash" in msg.lower():
+                    return _error("stale_population", msg, 409)
+                return _error("invalid_input", msg, 400)
         finally:
             store.close()
 

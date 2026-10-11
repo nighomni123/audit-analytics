@@ -301,7 +301,7 @@ class InvestigationIntegrationTests(unittest.TestCase):
         self.assertEqual(ctx["contract"]["run_id"], run_id)
 
         # Open the top-of-queue exception and verify deterministic-only state.
-        ex = b.store.conn.execute(
+        ex = self.b.store.conn.execute(
             """SELECT ledger_id, risk_score, severity, reasons_json FROM exceptions
                WHERE run_id=? ORDER BY risk_score DESC, id LIMIT 1""",
             (run_id,),
@@ -512,7 +512,7 @@ class InvestigationIntegrationTests(unittest.TestCase):
         self.b.configure()
         run_id = self.b.run_analysis()
 
-        ex = b.store.conn.execute(
+        ex = self.b.store.conn.execute(
             "SELECT id, ledger_id FROM exceptions WHERE ledger_id=?",
             (self.b.ledger_id_for("JE009"),),
         ).fetchone()
@@ -531,7 +531,7 @@ class InvestigationIntegrationTests(unittest.TestCase):
                                    "Evidence obtained.", ts + 10),
         )
 
-        other_ex = b.store.conn.execute(
+        other_ex = self.b.store.conn.execute(
             "SELECT id FROM exceptions WHERE ledger_id!=?", (self.b.ledger_id_for("JE009"),),
         ).fetchone()
         self.assertIsNotNone(other_ex)
@@ -619,7 +619,7 @@ class InvestigationIntegrationTests(unittest.TestCase):
         self.assertEqual(self.b.import_and_acknowledge(), 1)
         self.b.configure()
         run_id = self.b.run_analysis()
-        ex = b.store.conn.execute(
+        ex = self.b.store.conn.execute(
             "SELECT id, ledger_id FROM exceptions WHERE id=(SELECT id FROM exceptions LIMIT 1)",
         ).fetchone()
         ledger_id = ex["ledger_id"]
@@ -679,14 +679,23 @@ class InvestigationIntegrationTests(unittest.TestCase):
         self.assertEqual(self.b.import_and_acknowledge(), 1)
         self.b.configure()
         run_id = self.b.run_analysis()
-        # Ensure any open transaction is committed so concurrent Store
-        # connections to the same SQLite file do not deadlock.
+        # Ensure any open transaction is committed, then close this
+        # connection so the API's new Store can open the DB without lock.
         try:
             self.b.store.conn.execute("COMMIT")
+            self.b.store.conn.close()
         except Exception:
             pass
-        base = str(self.b.db_path)
-        client = TestClient(create_app(base))
+        base = str(self.b.db_path)  # original fixture DB used for API test
+        # Create an isolated backup using SQLite's native backup (handles WAL/state)
+        import sqlite3, tempfile as _tf
+        backup_path = str(self.b.db_path).replace("fixture.db", "contract.db")
+        src_con = sqlite3.connect(str(self.b.db_path))
+        dst_con = sqlite3.connect(backup_path)
+        with dst_con:
+            src_con.backup(dst_con)
+        src_con.close(); dst_con.close()
+        client = TestClient(create_app(backup_path))
 
         ledger_id = self.b.ledger_id_for("JE015")
         res = client.get(f"/api/investigation-context?run_id={run_id}&ledger_id={ledger_id}")
