@@ -292,3 +292,250 @@ export interface AuditLogPage {
   limit: number;
   offset: number;
 }
+
+export interface InvestigatorCue {
+  cue_id: string;
+  label: string;
+  source: "analytical_rule" | "calculated_statistic" | "semantic_model" | "experimental_ranker";
+  status: "available" | "not_applicable" | "unavailable";
+  value: unknown | null;
+  supporting_evidence: Array<{ field: string; value: unknown | null }>;
+  procedure: {
+    description: string;
+    why: string;
+    inspect_evidence: string[];
+    suggested_next_step: string;
+    audit_objective: string;
+    non_conclusive: boolean;
+    experimental?: boolean;
+    unrecognized?: boolean;
+  };
+  limitation: string | null;
+}
+
+export interface BankEvidence {
+  available: boolean;
+  status: "available" | "not_applicable" | "not_flagged";
+  match_type?: string | null;
+  amount_diff?: number | null;
+  bank_entry?: {
+    bank_row: number;
+    bank_date: string | null;
+    bank_narration: string;
+    bank_debit?: number | null;
+    bank_credit?: number | null;
+    bank_balance?: number | null;
+    bank_source_hash: string;
+  };
+  note?: string;
+}
+
+export interface ReviewHistoryContext {
+  available: boolean;
+  review_count: number;
+  latest_disposition: Disposition | null;
+  history: Array<{
+    review_id: number;
+    reviewer: string;
+    disposition: Disposition;
+    note: string;
+    created_at: number;
+    second_reviewer: string | null;
+    second_note: string | null;
+  }>;
+  governance: {
+    locked: boolean;
+    event: string | null;
+    actor: string | null;
+    reason: string | null;
+    changed_at: number | null;
+  };
+  note: string;
+}
+
+export interface SemanticEvidenceContext {
+  available: boolean;
+  status: "complete" | "unavailable" | "failed" | "not_started";
+  run_id?: number | null;
+  model?: string | null;
+  model_digest?: string | null;
+  dimensions?: number | null;
+  template_version?: string | null;
+  approximate_retrieval_disclosed?: boolean;
+  approximate_retrieval_note?: string;
+  population_hash?: string | null;
+  engagement_hash_matches?: boolean;
+  limitation?: string;
+  note?: string;
+}
+
+export interface PeerStatistics {
+  available: boolean;
+  status: string;
+  population_count: number;
+  sample_count?: number;
+  sample_of_population?: boolean;
+  median: number | null;
+  median_available: boolean;
+  mad: number | null;
+  mad_positive: boolean;
+  calculation: string;
+}
+
+export interface DuplicateGroup {
+  available: boolean;
+  count: number;
+  members: Array<{
+    ledger_id: number;
+    entry_id: string;
+    posting_date: string;
+    signed_amount: number;
+    description: string;
+    preparer: string;
+    source_row: number;
+    source_hash: string;
+  }>;
+  matching_rationale: string;
+}
+
+export interface ReversalResult {
+  available: boolean;
+  status: "flagged" | "not_flagged" | "not_applicable";
+  counterpart?: {
+    ledger_id: number;
+    entry_id: string;
+    posting_date: string;
+    signed_amount: number;
+    narration: string;
+    preparer: string;
+    source_row: number;
+    source_hash: string;
+  } | null;
+  basis?: string;
+  days_difference?: number;
+}
+
+export interface MaterialityContext {
+  configured: boolean;
+  status: string;
+  overall?: number | null;
+  performance?: number | null;
+  amount: number;
+  band: string;
+  note?: string;
+}
+
+export interface DataQuality {
+  missing_narration: boolean;
+  missing_preparer: boolean;
+  missing_reference: boolean;
+  missing_entity: boolean;
+  missing_vendor: boolean;
+  missing_document_date: boolean;
+}
+
+export interface TransactionLine {
+  available: boolean;
+  ledger_identity: number;
+  entry_id: string;
+  posting_date: string;
+  document_date: string | null;
+  account_code: string;
+  account_name: string;
+  signed_amount: number;
+  debit: number;
+  credit: number;
+  narration: string;
+  preparer: string;
+  reference: string;
+  entity: string;
+  vendor: string;
+  manual_or_system: string;
+  import_id: number;
+  source_file_display: string;
+  source_row: number;
+  source_hash: string;
+  raw_json_available: boolean;
+}
+
+export interface Lineage {
+  analysis_run_id: number;
+  run_status: string;
+  started_at: number;
+  completed_at: number | null;
+  model_name: string;
+  validation_status: string;
+  limitation_note: string;
+  population_count: number;
+  source_import_id: number;
+  source_display_name: string;
+  source_sha256: string;
+  accepted_rows: number;
+  rejected_rows: number;
+  lineage_available: boolean;
+  semantic_profile_run_id: number | null;
+  semantic_model?: string | null;
+  semantic_model_digest?: string | null;
+  semantic_template_version?: string | null;
+  semantic_approximate_retrieval?: boolean;
+  semantic_approximate_retrieval_note?: string;
+  semantic_population_hash?: string | null;
+}
+
+export interface FlaggedReason {
+  deterministic_reasons: string[];
+  experimental_reasons: string[];
+  deterministic_evidence_available: boolean;
+  experimental_evidence_available: boolean;
+  signal_components_source: string;
+  explanation: string;
+}
+
+export interface PopulationAndPeers {
+  account: string;
+  available: boolean;
+  status: string | null;
+  population_count: number;
+  peer_statistics: PeerStatistics | null;
+  duplicate_entries: DuplicateGroup;
+  possible_reversal: ReversalResult;
+  materiality: MaterialityContext;
+  population_indicators: { benford: unknown | null };
+  data_quality: DataQuality;
+}
+
+export interface SuggestedProcedure {
+  cue_id: string;
+  description: string | null;
+  why: string | null;
+  inspect_evidence: string[];
+  suggested_next_step: string | null;
+  audit_objective: string | null;
+  non_conclusive: boolean;
+  experimental: boolean;
+  unrecognized: boolean;
+}
+
+export interface InvestigationContext {
+  investigation_context_version: string;
+  read_only: boolean;
+  contract: {
+    run_id: number;
+    ledger_id: number;
+    semantic_run_id: number | null;
+    max_related: number;
+  };
+  transaction_line: TransactionLine;
+  lineage: Lineage;
+  why_flagged: FlaggedReason;
+  cues: InvestigatorCue[];
+  population_and_peers: PopulationAndPeers;
+  supporting_evidence: {
+    bank: BankEvidence;
+    review_history: ReviewHistoryContext;
+    semantic: SemanticEvidenceContext;
+  };
+  suggested_procedures: SuggestedProcedure[];
+  limitations: string[];
+  provenance_note: string;
+}

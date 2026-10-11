@@ -126,6 +126,11 @@ def main():
     investigate = sub.add_parser("semantic-investigate", help="read stored semantic investigation evidence offline")
     investigate.add_argument("--db", required=True); investigate.add_argument("--run", type=int, required=True)
     investigate.add_argument("--ledger-id", type=int, required=True)
+    investigate_ctx = sub.add_parser("investigate-context", help="read deterministic investigation context for an exception")
+    investigate_ctx.add_argument("--db", required=True)
+    investigate_ctx.add_argument("--run-id", type=int, required=True)
+    investigate_ctx.add_argument("--ledger-id", type=int, required=True)
+    investigate_ctx.add_argument("--semantic-run-id", type=int, default=None, help="optional linked semantic run")
     evaluate = sub.add_parser("semantic-evaluate", help="evaluate a stored semantic run against authorised labels")
     evaluate.add_argument("--db", required=True); evaluate.add_argument("--run", type=int, required=True)
     evaluate.add_argument("--labels", required=True); evaluate.add_argument("--actor", default=DEFAULT_ACTOR)
@@ -256,6 +261,9 @@ def main():
         elif args.cmd == "semantic-investigate":
             from .semantic_risk import semantic_investigate
             print(json.dumps(semantic_investigate(store, args.run, args.ledger_id), indent=2, default=str))
+        elif args.cmd == "investigate-context":
+            from .investigation_context import investigation_context
+            print(json.dumps(investigation_context(store, args.run_id, args.ledger_id, args.semantic_run_id), indent=2, default=str))
         elif args.cmd == "semantic-evaluate":
             from .semantic_evaluation import evaluate_semantic
             _require(store, args.actor, ("reviewer", "manager", "partner", "quality_reviewer"))

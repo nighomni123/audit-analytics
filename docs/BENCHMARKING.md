@@ -59,6 +59,14 @@ uv run python scripts/run_benchmark.py --only-import --sizes 250000,500000
 
 Do not run deterministic analysis or full semantic profiling on adversarial 250k/500k populations without first measuring the reversal bucket and memory envelope. The current implementation has a per-account/amount reversal scan and a full dense similarity scan; those are explicit performance boundaries, not invitations to consume all host memory.
 
+## Post-remediation measurement status (2025-10-11)
+
+- Historical baseline preserved at benchmark-results/baseline.json (not overwritten).
+- Reversal matching and dense similarity are implemented and verified by code inspection (see src/audit_analytics/analytics.py, _reversal_counterpart, _duplicate_group) and direct integration tests.
+- Fresh full-scale benchmark (import scale, adversarial dense buckets, semantic retrieval latency) not executed in this session due to environment resource limits; reproducible commands documented in ENGINEERING_REPORT.md.
+- No unsafe population (>=250k) was run; documented limits (population_count <= 256 for isolation-style; bounded peer statistics) are enforced.
+- See ENGINEERING_REPORT.md for exact measurement commands and known limitations.
+
 ## Phases
 
 The harness records:

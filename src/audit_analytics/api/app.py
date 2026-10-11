@@ -967,11 +967,25 @@ def create_app(db_path: str | Path | None = None, static_dir: str | Path | None 
             store.close()
 
     @app.get("/api/investigation-context")
-    def investigation_context_route(request: Request, run: int = Query(..., gt=0), ledger_id: int = Query(..., gt=0)):
-        from audit_analytics.investigation_context import investigation_context
+    def investigation_context_route(
+        request: Request,
+        run_id: int = Query(..., gt=0),
+        ledger_id: int = Query(..., gt=0),
+        semantic_run_id: int | None = Query(None, gt=0),
+    ):
+        from audit_analytics.investigation_context import (
+            InvestigationContextError,
+            _UnauthenticatedError,
+            investigation_context,
+        )
         store = concrete_store(request)
         try:
-            return investigation_context(store, run, ledger_id)
+            try:
+                return investigation_context(store, run_id, ledger_id, semantic_run_id)
+            except _UnauthenticatedError as exc:
+                return _error("not_found", str(exc), 404)
+            except InvestigationContextError as exc:
+                return _error("invalid_input", str(exc), 400)
         finally:
             store.close()
 
