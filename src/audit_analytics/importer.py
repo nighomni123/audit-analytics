@@ -42,7 +42,10 @@ def _key(s): return "".join(c.lower() for c in (s or "") if c.isalnum())
 
 def _number(value):
     if value in (None, ""): return 0.0
-    return float(str(value).replace(",", "").replace("₹", "").strip().strip("()") or 0)
+    text = str(value).replace(",", "").replace("₹", "").strip()
+    if text.startswith("(") and text.endswith(")"):
+        return -float(text[1:-1] or 0)
+    return float(text or 0)
 
 def _date(value):
     if isinstance(value, (int, float)) or (str(value).replace(".", "", 1).isdigit() and float(value) > 20000):
@@ -52,6 +55,20 @@ def _date(value):
         try: return datetime.strptime(raw, fmt).date().isoformat()
         except ValueError: pass
     raise ValueError("invalid posting date")
+
+
+def _is_ambiguous_date(raw) -> bool:
+    """True when a slash date parses under both DD/MM and MM/DD with different results."""
+    text = str(raw).strip()
+    try:
+        day_first = datetime.strptime(text, "%d/%m/%Y")
+    except ValueError:
+        return False
+    try:
+        month_first = datetime.strptime(text, "%m/%d/%Y")
+    except ValueError:
+        return False
+    return day_first != month_first
 
 def _validate_source(source: Path):
     if not source.is_file():
@@ -97,8 +114,18 @@ def _cleanup_evidence(target: Path, created: bool):
 
 def _rows(path: Path):
     if path.suffix.lower() == ".csv":
-        with path.open(newline="", encoding="utf-8-sig") as f:
-            yield from csv.DictReader(f)
+        data = path.read_bytes()
+        text = None
+        for encoding in ("utf-8-sig", "cp1252"):
+            try:
+                text = data.decode(encoding)
+                break
+            except UnicodeDecodeError:
+                text = None
+        if text is None:
+            raise ValueError("source file is not UTF-8 or Windows-1252 CSV")
+        import io
+        yield from csv.DictReader(io.StringIO(text, newline=""))
         return
     if path.suffix.lower() == ".xlsx":
         ns = "{http://schemas.openxmlformats.org/spreadsheetml/2006/main}"
@@ -107,7 +134,21 @@ def _rows(path: Path):
             if "xl/sharedStrings.xml" in book.namelist():
                 root = ET.fromstring(book.read("xl/sharedStrings.xml"))
                 shared = ["".join(node.itertext()) for node in root.findall(f"{ns}si")]
-            sheets = sorted(n for n in book.namelist() if n.startswith("xl/worksheets/sheet") and n.endswith(".xml"))
+            sheets = []
+            if "xl/workbook.xml" in book.namelist() and "xl/_rels/workbook.xml.rels" in book.namelist():
+                wb = ET.fromstring(book.read("xl/workbook.xml"))
+                rels = ET.fromstring(book.read("xl/_rels/workbook.xml.rels"))
+                rel_map = {rel.get("Id"): rel.get("Target") for rel in rels}
+                main_ns = "{http://schemas.openxmlformats.org/spreadsheetml/2006/main}"
+                r_ns = "{http://schemas.openxmlformats.org/officeDocument/2006/relationships}"
+                for sheet in wb.iter(f"{main_ns}sheet"):
+                    if (sheet.get("state") or "visible") != "visible":
+                        continue
+                    target = rel_map.get(sheet.get(f"{r_ns}id"))
+                    if target:
+                        sheets.append("xl/" + target.lstrip("/"))
+            if not sheets:
+                sheets = sorted(n for n in book.namelist() if n.startswith("xl/worksheets/sheet") and n.endswith(".xml"))
             if not sheets: raise ValueError("XLSX contains no worksheet")
             parsed = []
             for row in ET.fromstring(book.read(sheets[0])).iter(f"{ns}row"):
@@ -145,10 +186,18 @@ def preview_gl(filename: str, mapping=None, sample_size=10):
     iterator = _rows(source)
     sample = []
     row_count = 0
+    ambiguous_date_rows = 0
+    date_header = None
     for raw in iterator:
         row_count += 1
         if len(sample) < sample_size:
             sample.append(raw)
+        if date_header is None:
+            inferred_header = (mapping or {}).get("posting_date") or next(
+                (a for a in ALIASES["posting_date"] if _key(a) in {_key(k) for k in raw}), None)
+            date_header = next((k for k in raw if _key(k) == _key(inferred_header)), None) if inferred_header else None
+        if date_header and _is_ambiguous_date(raw.get(date_header)):
+            ambiguous_date_rows += 1
     headers = list(sample[0]) if sample else []
     inferred = {}
     for field, aliases in ALIASES.items():
@@ -156,7 +205,10 @@ def preview_gl(filename: str, mapping=None, sample_size=10):
         inferred[field] = explicit or next((h for h in headers if _key(h) in {_key(a) for a in aliases}), None)
     missing = [field for field in ("entry_id", "posting_date", "account_code") if not inferred[field]]
     if not inferred["amount"] and not (inferred["debit"] and inferred["credit"]): missing.append("amount or debit+credit")
-    return {"file": source.name, "headers": headers, "mapping": inferred, "missing_required": missing, "sample_rows": sample, "row_count": row_count}
+    return {"file": source.name, "headers": headers, "mapping": inferred, "missing_required": missing,
+            "sample_rows": sample, "row_count": row_count,
+            "ambiguous_date_rows": ambiguous_date_rows,
+            "date_format_assumed": "DD/MM/YYYY" if ambiguous_date_rows else None}
 
 
 def import_gl(
@@ -169,6 +221,7 @@ def import_gl(
     expected_credits=None,
     reimport: bool = False,
     commit: bool = True,
+    progress=None,
 ):
     source = Path(filename)
     _validate_source(source)
@@ -214,16 +267,27 @@ def import_gl(
                 accepted += 1
                 debits += debit
                 credits += credit
+                if progress is not None and (accepted + rejected) % 1000 == 0:
+                    progress(accepted, rejected)
             except (ValueError, TypeError) as exc:
                 rejected += 1
+                reason = str(exc)
+                if reason == "invalid posting date":
+                    reason = f"invalid posting date: '{r['posting_date']}'"
+                elif reason == "invalid debit/credit values":
+                    reason = f"invalid debit/credit values: debit='{r['debit']}', credit='{r['credit']}'"
                 store.conn.execute(
                     "INSERT INTO rejected_rows(import_id,source_row,reason,raw_json) VALUES(?,?,?,?)",
-                    (import_id, line, str(exc), json.dumps(raw, default=str)),
+                    (import_id, line, reason, json.dumps(raw, default=str)),
                 )
+                if progress is not None and (accepted + rejected) % 1000 == 0:
+                    progress(accepted, rejected)
         store.conn.execute(
             "UPDATE imports SET accepted_rows=?,rejected_rows=?,control_debits=?,control_credits=? WHERE id=?",
             (accepted, rejected, debits, credits, import_id),
         )
+        if progress is not None:
+            progress(accepted, rejected)
         store.log(
             actor,
             "import_gl",

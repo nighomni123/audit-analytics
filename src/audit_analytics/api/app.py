@@ -8,6 +8,8 @@ import os
 import secrets
 import sqlite3
 import tempfile
+import threading
+import uuid
 import time
 import zipfile
 from contextlib import contextmanager
@@ -56,6 +58,9 @@ from audit_analytics.workflow import (
 Disposition = Literal["open", "cleared", "follow_up", "selected_for_testing"]
 logger = logging.getLogger("audit_analytics.api")
 
+_JOB_REGISTRY: dict[str, dict] = {}
+_JOB_LOCK = threading.Lock()
+
 
 class StrictModel(BaseModel):
     model_config = ConfigDict(str_strip_whitespace=True, extra="forbid")
@@ -65,6 +70,11 @@ class EngagementBody(StrictModel):
     client: str = Field(min_length=1, max_length=200)
     period: str = Field(pattern=r"^\d{4}-\d{2}-\d{2}:\d{4}-\d{2}-\d{2}$")
     owner: str = Field(min_length=1, max_length=100)
+
+class UserBody(StrictModel):
+    username: str = Field(min_length=1, max_length=100)
+    role: str = Field(min_length=1, max_length=32)
+    actor: str = Field(min_length=1, max_length=100)
 
 
 class AcknowledgeBody(StrictModel):
@@ -260,6 +270,85 @@ def _sample_payload(store: Store, sample_id: int, item_limit: int):
     return item
 
 
+
+def _job_update(job_id: str, **values):
+    with _JOB_LOCK:
+        if job_id in _JOB_REGISTRY:
+            _JOB_REGISTRY[job_id].update(values)
+
+
+def _run_import_job(db_path, job_id, source_path, actor, expected_rows, expected_debits, expected_credits, reimport, mapping, mapping_name):
+    store = None
+    try:
+        _job_update(job_id, status="running")
+        store = Store(db_path)
+        from audit_analytics.importer import preview_gl as _preview
+        from audit_analytics.workflow import PREPARER_ROLES, require_role as _require_role
+        _require_role(store, actor, PREPARER_ROLES)
+        selected_mapping = None
+        if mapping:
+            selected_mapping = json.loads(mapping)
+        if mapping_name:
+            row = store.conn.execute("SELECT mapping_json FROM import_mappings WHERE name=?", (mapping_name,)).fetchone()
+            if not row:
+                raise ValueError(f"mapping profile not found: {mapping_name}")
+            selected_mapping = json.loads(row[0])
+        try:
+            total_rows = _preview(str(source_path), selected_mapping)["row_count"]
+        except Exception:
+            total_rows = 0
+        _job_update(job_id, total_rows=total_rows)
+
+        def progress(accepted, rejected):
+            _job_update(job_id, accepted_rows=accepted, rejected_rows=rejected, status="running")
+
+        import_id, accepted, rejected, debits, credits = import_gl(
+            store,
+            str(source_path),
+            actor,
+            selected_mapping,
+            expected_rows,
+            expected_debits,
+            expected_credits,
+            reimport,
+            progress=progress,
+        )
+        reconciliation = store.reconciliation(import_id)
+        _job_update(
+            job_id,
+            status="complete",
+            accepted_rows=accepted,
+            rejected_rows=rejected,
+            import_id=import_id,
+            debits=debits,
+            credits=credits,
+            reconciliation=reconciliation,
+        )
+    except Exception as exc:
+        _job_update(job_id, status="failed", error=str(exc))
+    finally:
+        if store is not None:
+            store.close()
+        try:
+            Path(source_path).unlink(missing_ok=True)
+            Path(source_path).parent.rmdir()
+        except OSError:
+            pass
+
+
+def _run_analysis_job(db_path, job_id, actor, include_isolation, semantic_run_id):
+    store = None
+    try:
+        _job_update(job_id, status="running")
+        store = Store(db_path)
+        run_id = run_analysis(store, actor, include_isolation, semantic_run_id)
+        _job_update(job_id, status="complete", run_id=run_id)
+    except Exception as exc:
+        _job_update(job_id, status="failed", error=str(exc))
+    finally:
+        if store is not None:
+            store.close()
+
 def create_app(db_path: str | Path | None = None, static_dir: str | Path | None = None) -> FastAPI:
     resolved_db = Path(db_path or os.environ.get("AUDIT_DB", Path.cwd() / "data" / "demo.db"))
     resolved_static = Path(static_dir) if static_dir else Path(__file__).resolve().parent.parent / "static"
@@ -386,6 +475,17 @@ def create_app(db_path: str | Path | None = None, static_dir: str | Path | None 
         finally:
             store.close()
 
+    @app.post("/api/users")
+    def create_user(body: UserBody, request: Request):
+        store = concrete_store(request)
+        try:
+            require_role(store, body.actor, {"manager", "partner"})
+            store.add_user(body.username, body.role, body.actor)
+            store.conn.commit()
+            return {"username": body.username, "role": body.role}
+        finally:
+            store.close()
+
     @app.post("/api/imports/preview")
     def import_preview(file: UploadFile = File(...), mapping: str | None = Form(None)):
         with _upload_path(file) as path:
@@ -458,6 +558,93 @@ def create_app(db_path: str | Path | None = None, static_dir: str | Path | None 
             return store.reconciliation(import_id)
         finally:
             store.close()
+
+    @app.get("/api/imports/{import_id}/rejected")
+    def import_rejected(import_id: int, request: Request, limit: int = Query(100, ge=1, le=500), offset: int = Query(0, ge=0)):
+        store = concrete_store(request)
+        try:
+            if not store.conn.execute("SELECT 1 FROM imports WHERE id=?", (import_id,)).fetchone():
+                raise LookupError("import not found")
+            total = store.conn.execute("SELECT COUNT(*) FROM rejected_rows WHERE import_id=?", (import_id,)).fetchone()[0]
+            rows = [
+                {"source_row": row["source_row"], "reason": row["reason"], "raw": _decode_json(row["raw_json"], {})}
+                for row in store.conn.execute(
+                    "SELECT source_row,reason,raw_json FROM rejected_rows WHERE import_id=? ORDER BY source_row LIMIT ? OFFSET ?",
+                    (import_id, limit, offset),
+                )
+            ]
+            return {"rows": rows, "total": total, "limit": limit, "offset": offset}
+        finally:
+            store.close()
+
+    @app.post("/api/import-jobs")
+    def import_job_create(
+        file: UploadFile = File(...),
+        actor: str = Form(...),
+        expected_rows: int | None = Form(None, ge=0),
+        expected_debits: float | None = Form(None),
+        expected_credits: float | None = Form(None),
+        mapping: str | None = Form(None),
+        mapping_name: str | None = Form(None),
+        reimport: bool = Form(False),
+    ):
+        temp_dir = Path(tempfile.mkdtemp(prefix="audit-import-job-"))
+        dest = temp_dir / (Path(file.filename or "upload.csv").name or "upload.csv")
+        total = 0
+        try:
+            with dest.open("wb") as out:
+                while chunk := file.file.read(1024 * 1024):
+                    total += len(chunk)
+                    if total > MAX_SOURCE_BYTES:
+                        raise WorkflowError(f"source file exceeds the {MAX_SOURCE_BYTES}-byte import limit", "file_too_large", 413)
+                    out.write(chunk)
+        finally:
+            file.file.close()
+        job_id = uuid.uuid4().hex
+        with _JOB_LOCK:
+            _JOB_REGISTRY[job_id] = {
+                "job_id": job_id,
+                "status": "queued",
+                "accepted_rows": 0,
+                "rejected_rows": 0,
+                "total_rows": 0,
+            }
+        thread = threading.Thread(
+            target=_run_import_job,
+            args=(db_path, job_id, str(dest), actor, expected_rows, expected_debits, expected_credits, reimport, mapping, mapping_name),
+            daemon=True,
+        )
+        thread.start()
+        return {"job_id": job_id, "status": "queued"}
+
+    @app.get("/api/import-jobs/{job_id}")
+    def import_job_status(job_id: str):
+        with _JOB_LOCK:
+            job = _JOB_REGISTRY.get(job_id)
+        if not job:
+            raise LookupError("import job not found")
+        return dict(job)
+
+    @app.post("/api/analysis-jobs")
+    def analysis_job_create(body: AnalysisBody, request: Request):
+        job_id = uuid.uuid4().hex
+        with _JOB_LOCK:
+            _JOB_REGISTRY[job_id] = {"job_id": job_id, "status": "queued", "run_id": None}
+        thread = threading.Thread(
+            target=_run_analysis_job,
+            args=(db_path, job_id, body.actor, body.include_isolation, body.semantic_run_id),
+            daemon=True,
+        )
+        thread.start()
+        return {"job_id": job_id, "status": "queued"}
+
+    @app.get("/api/analysis-jobs/{job_id}")
+    def analysis_job_status(job_id: str):
+        with _JOB_LOCK:
+            job = _JOB_REGISTRY.get(job_id)
+        if not job:
+            raise LookupError("analysis job not found")
+        return dict(job)
 
     @app.post("/api/imports/acknowledge")
     def acknowledge(body: AcknowledgeBody, request: Request):
@@ -868,7 +1055,10 @@ def create_app(db_path: str | Path | None = None, static_dir: str | Path | None 
     def similar(request: Request, q: str = Query(..., min_length=1, max_length=1000), limit: int = Query(25, ge=1, le=100)):
         store = concrete_store(request)
         try:
-            return {"query": q, "results": similar_transactions(store, q, limit)}
+            embedded = store.conn.execute("SELECT COUNT(*) FROM ledger_embeddings").fetchone()[0]
+            if not embedded:
+                return {"available": False, "hint": "run embed-ledger first", "query": q, "results": []}
+            return {"available": True, "query": q, "results": similar_transactions(store, q, limit)}
         finally:
             store.close()
 

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import sqlite3
 from pathlib import Path
 
 from .bank import import_bank, reconcile_bank
@@ -30,6 +31,8 @@ def _mapping(args, store):
     if getattr(args, "mapping", None):
         return json.loads(Path(args.mapping).read_text(encoding="utf-8"))
     if getattr(args, "mapping_name", None):
+        if store is None:
+            raise ValueError("--mapping-name requires --db")
         row = store.conn.execute("SELECT mapping_json FROM import_mappings WHERE name=?", (args.mapping_name,)).fetchone()
         if not row:
             raise ValueError(f"mapping profile not found: {args.mapping_name}")
@@ -77,8 +80,9 @@ def _parse_fiscal_calendar(args):
     raise ValueError("provide --dates or --file")
 
 
-def main():
+def main(argv=None):
     p = argparse.ArgumentParser(description="Local-first journal-entry audit analytics")
+    p.add_argument("--version", action="version", version="audit-analytics 1.0.0")
     sub = p.add_subparsers(dest="cmd", required=True)
     init = sub.add_parser("init", help="create an isolated engagement")
     init.add_argument("--db", required=True); init.add_argument("--client", required=True)
@@ -97,12 +101,15 @@ def main():
     gl.add_argument("--expected-credits", type=float)
 
     preview = sub.add_parser("preview-gl", help="inspect detected source headers before import")
-    preview.add_argument("--db", required=True); preview.add_argument("--file", required=True)
+    preview.add_argument("--db"); preview.add_argument("--file", required=True)
     preview.add_argument("--mapping")
     save_mapping = sub.add_parser("save-mapping", help="save a reviewed mapping profile")
     save_mapping.add_argument("--db", required=True); save_mapping.add_argument("--name", required=True)
     save_mapping.add_argument("--mapping", required=True); save_mapping.add_argument("--actor", default=DEFAULT_ACTOR)
     list_mappings = sub.add_parser("list-mappings"); list_mappings.add_argument("--db", required=True)
+    rejected = sub.add_parser("rejected-rows", help="show rows rejected during a GL import, with reasons")
+    rejected.add_argument("--db", required=True); rejected.add_argument("--import", type=int, required=True, dest="import_id")
+    rejected.add_argument("--limit", type=int, default=100)
 
     ack = sub.add_parser("acknowledge-population", help="record reconciliation and unlock analysis")
     ack.add_argument("--db", required=True); ack.add_argument("--reviewer", required=True); ack.add_argument("--note", required=True)
@@ -202,18 +209,36 @@ def main():
     val.add_argument("--performance", help="JSON object of performance metrics")
     lmod = sub.add_parser("list-models", help="list registered models"); lmod.add_argument("--db", required=True)
 
-    args = p.parse_args()
+    args = p.parse_args(argv)
     if args.cmd == "serve":
         if not 1 <= args.port <= 65535:
             p.error("port must be from 1 to 65535")
+        if not Path(args.db).is_file():
+            print(f"note: engagement database not found at {args.db}; a new empty engagement will be created "
+                  f"— run 'init' first if that is unexpected")
         try:
             import uvicorn
             from .api.app import create_app
         except ImportError as exc:
             p.exit(2, f"error: web dependencies are missing; install audit-analytics[web]\n")
-        uvicorn.run(create_app(args.db), host="127.0.0.1", port=args.port)
+        try:
+            uvicorn.run(create_app(args.db), host="127.0.0.1", port=args.port)
+        except OSError:
+            p.exit(2, f"error: port {args.port} is busy; try: python3 run.py serve --db {args.db} --port 8790\n")
         return
-    store = Store(args.db)
+    if args.cmd not in ("init", "preview-gl") and not Path(args.db).is_file():
+        p.exit(2, f"error: engagement database not found: {args.db} "
+                  f"(create it with: python3 run.py init --db {args.db} ...)\n")
+    try:
+        store = None
+        if args.cmd == "preview-gl" and args.db is not None and Path(args.db).is_file():
+            store = Store(args.db)
+        elif args.cmd != "preview-gl":
+            store = Store(args.db)
+        if args.cmd == "preview-gl" and getattr(args, "mapping_name", None) and store is None:
+            p.error("--mapping-name requires --db")
+    except sqlite3.DatabaseError:
+        p.exit(2, f"error: this file is not an audit-analytics engagement database: {args.db}\n")
     try:
         if args.cmd == "init":
             engagement = create_engagement(store, args.client, args.period, args.owner)
@@ -226,6 +251,12 @@ def main():
             store.log(args.actor, "save_mapping", "mapping", args.name, mapping); store.conn.commit(); print(f"saved mapping profile {args.name}")
         elif args.cmd == "list-mappings":
             print(json.dumps([dict(r) for r in store.conn.execute("SELECT name,created_at,created_by FROM import_mappings ORDER BY name")], indent=2))
+        elif args.cmd == "rejected-rows":
+            total = store.conn.execute("SELECT COUNT(*) FROM rejected_rows WHERE import_id=?", (args.import_id,)).fetchone()[0]
+            rows = [{"source_row": r["source_row"], "reason": r["reason"], "raw": json.loads(r["raw_json"])} for r in store.conn.execute(
+                "SELECT source_row,reason,raw_json FROM rejected_rows WHERE import_id=? ORDER BY source_row LIMIT ?",
+                (args.import_id, args.limit))]
+            print(json.dumps({"import_id": args.import_id, "total": total, "rows": rows}, indent=2))
         elif args.cmd == "import-gl":
             _require(store, args.actor, ("preparer", "reviewer", "manager", "partner"))
             iid, accepted, rejected, debits, credits = import_gl(store, args.file, args.actor, _mapping(args, store), args.expected_rows, args.expected_debits, args.expected_credits, args.reimport)
@@ -269,7 +300,11 @@ def main():
             _require(store, args.actor, ("reviewer", "manager", "partner", "quality_reviewer"))
             print(json.dumps(evaluate_semantic(store, args.run, args.labels, args.actor), indent=2, default=str))
         elif args.cmd == "similar":
-            rows = similar_transactions(store, args.query, args.limit, args.model); print(json.dumps({"query": args.query, "count": len(rows), "results": rows}, indent=2))
+            embedded = store.conn.execute("SELECT COUNT(*) FROM ledger_embeddings").fetchone()[0]
+            if not embedded:
+                print(json.dumps({"available": False, "hint": "run embed-ledger first", "query": args.query, "count": 0, "results": []}, indent=2)); 
+            else:
+                rows = similar_transactions(store, args.query, args.limit, args.model); print(json.dumps({"available": True, "query": args.query, "count": len(rows), "results": rows}, indent=2))
         elif args.cmd == "review":
             result = record_review(
                 store,
@@ -327,7 +362,10 @@ def main():
             print(json.dumps(summary, indent=2, default=str))
         else:
             p.error(f"unknown command: {args.cmd}")
-    except (ValueError, LookupError, OSError) as exc:
+    except (ValueError, LookupError, OSError, sqlite3.DatabaseError) as exc:
+        if isinstance(exc, sqlite3.DatabaseError):
+            p.exit(2, f"error: this file is not an audit-analytics engagement database: {args.db}\n")
         p.exit(2, f"error: {exc}\n")
     finally:
-        store.close()
+        if store is not None:
+            store.close()

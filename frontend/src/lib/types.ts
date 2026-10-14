@@ -122,6 +122,20 @@ export interface PreviewResult {
   missing_required: string[];
   sample_rows: Record<string, string>[];
   row_count?: number;
+  ambiguous_date_rows?: number;
+  date_format_assumed?: string | null;
+}
+
+export interface RejectedRow {
+  source_row: number;
+  reason: string;
+  raw: Record<string, string>;
+}
+
+export interface RejectedRowsResult {
+  import_id: number;
+  total: number;
+  rows: RejectedRow[];
 }
 
 export interface ImportResult {
